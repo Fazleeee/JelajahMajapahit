@@ -8,6 +8,7 @@ export class VegetationAndNatureSystem {
     this.flameMeshes = [];
     this.torchLights = [];
     this.beaconRings = [];
+    this.colliders = [];
 
     this.initSharedMaterials();
     this.buildSacredMajaTree();
@@ -17,6 +18,24 @@ export class VegetationAndNatureSystem {
     this.buildRoyalTorches();
     this.buildHistoricalSignposts();
     this.initAmbientParticles();
+  }
+
+  isInsideProtectedArea(x, z) {
+    // Kolam Segaran
+    if (x > -74 && x < -30 && z > -26 && z < 36) return true;
+    // Kedaton Agung courtyard & perimeter
+    if (Math.abs(x) < 48 && z > -168 && z < -68) return true;
+    // Pasar Kotaraja
+    if (x > 6 && x < 32 && z > -2 && z < 26) return true;
+    // Candi Bajang Ratu & Sanggar Pujangga
+    if (x > 90 && x < 136 && z > -24 && z < 4) return true;
+    // Barak Bhayangkara & Dermaga Jung
+    if (x < -86 && x > -148 && z > 2 && z < 32) return true;
+    // Perkemahan Raden Wijaya
+    if (x > -24 && x < -4 && z > 112 && z < 138) return true;
+    // Spawn point clearance
+    if (Math.hypot(x, z - 142) < 9) return true;
+    return false;
   }
 
   initSharedMaterials() {
@@ -170,11 +189,8 @@ export class VegetationAndNatureSystem {
       const ry = getTerrainHeight(rx, rz);
       const roadFactor = getRoadFactor(rx, rz);
 
-      // Don't place trees underwater, on roads, or inside Kolam Segaran
-      if (ry < 0.75 || roadFactor > 0.18) continue;
-      if (rx > -74 && rx < -30 && rz > -26 && rz < 36) continue;
-      // Keep immediate spawn clear
-      if (Math.hypot(rx, rz - 142) < 9) continue;
+      // Don't place trees underwater, on roads, or inside protected structures
+      if (ry < 0.75 || roadFactor > 0.18 || this.isInsideProtectedArea(rx, rz)) continue;
 
       const scale = 0.8 + (i % 7) * 0.12;
 
@@ -184,6 +200,15 @@ export class VegetationAndNatureSystem {
         palm.position.set(rx, ry, rz);
         palm.rotation.y = (i * 1.7) % (Math.PI * 2);
         treeGroup.add(palm);
+
+        this.colliders.push({
+          type: 'circle',
+          x: rx,
+          z: rz,
+          radius: 0.42 * scale,
+          yMin: -2.0,
+          yMax: ry + 8.0
+        });
       } else {
         // Tropical Hardwood or Maja Tree (in Hutan Tarik z > 80)
         const hasMajaFruit = rz > 80 && i % 3 === 0;
@@ -191,6 +216,15 @@ export class VegetationAndNatureSystem {
         tree.position.set(rx, ry, rz);
         tree.rotation.y = (i * 2.3) % (Math.PI * 2);
         treeGroup.add(tree);
+
+        this.colliders.push({
+          type: 'circle',
+          x: rx,
+          z: rz,
+          radius: 0.52 * scale,
+          yMin: -2.0,
+          yMax: ry + 8.0
+        });
       }
     }
 
@@ -276,8 +310,8 @@ export class VegetationAndNatureSystem {
       const rz = ((s2 - Math.floor(s2)) - 0.5) * 320;
       const ry = getTerrainHeight(rx, rz);
 
-      if (getRoadFactor(rx, rz) > 0.1 || ry < -0.5) continue;
-      if (rx > -72 && rx < -32 && rz > -24 && rz < 34) continue;
+      if (getRoadFactor(rx, rz) > 0.1 || ry < -0.5 || this.isInsideProtectedArea(rx, rz)) continue;
+      if (Math.hypot(rx - -48, rz - 68) < 4.5) continue; // Bebaskan area Prasasti Kudadu
 
       const rSize = 0.5 + (i % 5) * 0.35;
       const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(rSize, 0), this.rockMat);
@@ -287,6 +321,17 @@ export class VegetationAndNatureSystem {
       rock.castShadow = true;
       rock.receiveShadow = true;
       group.add(rock);
+
+      if (rSize >= 0.75) {
+        this.colliders.push({
+          type: 'circle',
+          x: rx,
+          z: rz,
+          radius: rSize * 0.85,
+          yMin: -2.0,
+          yMax: ry + 4.0
+        });
+      }
     }
 
     // Lotus pads floating on Kolam Segaran (x: -66..-38, z: -18..28)
@@ -345,6 +390,15 @@ export class VegetationAndNatureSystem {
       pillar.position.y = 1.1;
       pillar.castShadow = true;
       stand.add(pillar);
+
+      this.colliders.push({
+        type: 'circle',
+        x: tx,
+        z: tz,
+        radius: 0.52,
+        yMin: -2.0,
+        yMax: ty + 5.0
+      });
 
       // Flame cone
       const flame = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.78, 7), this.flameMat);

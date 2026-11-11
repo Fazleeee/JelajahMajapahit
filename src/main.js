@@ -57,9 +57,6 @@ class MajapahitWorldApp {
   }
 
   initWorldSystems() {
-    // 0. Spatial Grid Optimization O(1) for collisions and landmarks
-    spatialGrid.populate(SOLID_COLLIDERS, LANDMARKS, NPC_DATA);
-
     // 1. Terrain, River Brantas, Kolam Segaran, Hills, Moat & Bridges
     this.terrain = new TerrainSystem(this.scene);
 
@@ -68,6 +65,10 @@ class MajapahitWorldApp {
 
     // 3. Nusantara Flora (Pohon Maja Agung, Beringin, Kelapa, Lotus, Torches, Prasasti Signposts)
     this.vegetation = new VegetationAndNatureSystem(this.scene);
+
+    // 4. Spatial Grid Optimization O(1) for architectural + procedural tree/torch/rock colliders
+    const allColliders = [...SOLID_COLLIDERS, ...(this.vegetation.colliders || [])];
+    spatialGrid.populate(allColliders, LANDMARKS, NPC_DATA);
 
     // 4. Arsitektur Megah 5 Wilayah Majapahit (Candi Bajang Ratu, Wringin Lawang, Pasar, Kapal Jung, Kedaton)
     this.architecture = new ArchitectureSystem(this.scene);

@@ -317,11 +317,13 @@ export class MinimapAndHUD {
 
     if (this.dialogueModal) {
       this.dialogueModal.addEventListener('click', (e) => {
+        if (this.isTyping) {
+          // Klik/ketuk saat teks sedang diketik langsung menyelesaikannya seketika
+          this.finishTypewriter();
+          return;
+        }
         if (e.target === this.dialogueModal) {
           gameState.closeModal(ModalTypes.DIALOGUE);
-        } else if (this.isTyping) {
-          // Klik saat teks sedang diketik langsung menyelesaikannya seketika
-          this.finishTypewriter();
         }
       });
       this.dialogueModal.addEventListener('wheel', (e) => e.stopPropagation());
@@ -639,17 +641,30 @@ export class MinimapAndHUD {
   }
 
   initGameStateListeners() {
-    eventBus.on(GameEvents.MODAL_OPEN, ({ modalType }) => {
+    eventBus.on(GameEvents.MODAL_OPEN, ({ modalType, data }) => {
       this.closeAllDOMModals(modalType);
 
       switch (modalType) {
         case ModalTypes.LORE:
+          if (data) {
+            const title = data.landmark ? data.landmark.title : data.title;
+            const text = data.landmark ? data.landmark.text : data.text;
+            if (title && text) this.populateLoreContent(title, text);
+          }
           if (this.loreModal) this.loreModal.classList.remove('hidden');
           break;
         case ModalTypes.DIALOGUE:
+          if (data && data.npc) {
+            this.populateDialogueContent(data.npc);
+          }
           if (this.dialogueModal) this.dialogueModal.classList.remove('hidden');
           break;
         case ModalTypes.ARTIFACT:
+          if (data && data.artifact) {
+            this.populateArtifactContent(data.artifact);
+            this.updateRelicBadge();
+            this.updateQuestTracker();
+          }
           if (this.artifactModal) this.artifactModal.classList.remove('hidden');
           break;
         case ModalTypes.ATLAS:
@@ -875,8 +890,9 @@ export class MinimapAndHUD {
     }
   }
 
-  // RPG Dialogue System
-  showDialogue(npc) {
+  // RPG Dialogue System (Genshin Impact Style)
+  populateDialogueContent(npc) {
+    if (!npc) return;
     this.currentDialogueNPC = npc;
     this.speakerIconEl.textContent = npc.icon;
     this.speakerNameEl.textContent = npc.name;
@@ -890,7 +906,10 @@ export class MinimapAndHUD {
     }
 
     this.renderDialogueNode('root');
-    gameState.openModal(ModalTypes.DIALOGUE);
+  }
+
+  showDialogue(npc) {
+    gameState.openModal(ModalTypes.DIALOGUE, { npc });
   }
 
   renderDialogueNode(nodeKey) {
@@ -909,7 +928,7 @@ export class MinimapAndHUD {
         if (qState.questCanTurnIn) {
           const btnTurnIn = document.createElement('button');
           btnTurnIn.className = 'btn-choice btn-choice-quest';
-          btnTurnIn.innerHTML = `<span>🏆 Serahkan Bukti Sejarah & Selesaikan Misi!</span>`;
+          btnTurnIn.innerHTML = `<span class="choice-ico">🏆</span><span class="choice-txt">Serahkan Bukti Sejarah & Selesaikan Misi!</span>`;
           btnTurnIn.addEventListener('click', (e) => {
             e.stopPropagation();
             this.quests.completeQuest(qState.questPrompt.questId);
@@ -920,7 +939,7 @@ export class MinimapAndHUD {
 
         const btnBack = document.createElement('button');
         btnBack.className = 'btn-choice btn-choice-farewell';
-        btnBack.textContent = 'Kembali ke pokok pembicaraan.';
+        btnBack.innerHTML = `<span class="choice-ico">↩️</span><span class="choice-txt">Kembali ke pokok pembicaraan.</span>`;
         btnBack.addEventListener('click', (e) => {
           e.stopPropagation();
           this.renderDialogueNode('root');
@@ -940,15 +959,26 @@ export class MinimapAndHUD {
         const isQuestAction = opt.next === 'quest_check' || opt.text.toLowerCase().includes('tugas') || opt.text.toLowerCase().includes('misi');
         const isFarewell = opt.next === 'root_close' || opt.text.toLowerCase().includes('pamit') || opt.text.toLowerCase().includes('terima kasih');
 
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'choice-ico';
         if (isQuestAction) {
           btn.className = 'btn-choice btn-choice-quest';
+          iconSpan.textContent = '❗';
         } else if (isFarewell) {
           btn.className = 'btn-choice btn-choice-farewell';
+          iconSpan.textContent = '👋';
         } else {
           btn.className = 'btn-choice';
+          iconSpan.textContent = '💬';
         }
 
-        btn.textContent = opt.text;
+        const textSpan = document.createElement('span');
+        textSpan.className = 'choice-txt';
+        textSpan.textContent = opt.text;
+
+        btn.appendChild(iconSpan);
+        btn.appendChild(textSpan);
+
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
           this.renderDialogueNode(opt.next);
@@ -958,7 +988,7 @@ export class MinimapAndHUD {
     } else {
       const btnClose = document.createElement('button');
       btnClose.className = 'btn-choice btn-choice-farewell';
-      btnClose.textContent = 'Pamit dan lanjutkan penjelajahan (E).';
+      btnClose.innerHTML = `<span class="choice-ico">🚪</span><span class="choice-txt">Pamit & Lanjutkan Penjelajahan</span>`;
       btnClose.addEventListener('click', (e) => {
         e.stopPropagation();
         this.closeDialogue();
@@ -967,7 +997,7 @@ export class MinimapAndHUD {
     }
   }
 
-  showLoreModal(title, text) {
+  populateLoreContent(title, text) {
     this.loreModalTitle.textContent = title;
     this.loreModalBody.textContent = text;
 
@@ -991,15 +1021,22 @@ export class MinimapAndHUD {
     }
 
     if (this.audio) this.audio.playDialoguePop();
-    gameState.openModal(ModalTypes.LORE);
   }
 
-  showArtifactModal(art) {
+  showLoreModal(title, text) {
+    gameState.openModal(ModalTypes.LORE, { title, text });
+  }
+
+  populateArtifactContent(art) {
+    if (!art) return;
     this.artTitleEl.textContent = art.title;
     this.artEraEl.textContent = art.era;
     this.artZoneEl.textContent = `📍 Lokasi: ${art.zone}`;
     this.artLoreEl.textContent = art.lore;
-    gameState.openModal(ModalTypes.ARTIFACT);
+  }
+
+  showArtifactModal(art) {
+    gameState.openModal(ModalTypes.ARTIFACT, { artifact: art });
   }
 
   showViewpointBanner(vp) {

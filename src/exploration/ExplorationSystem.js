@@ -434,7 +434,7 @@ export class ExplorationSystem {
     for (const art of this.artifactMeshes) {
       if (art.collected) continue;
       const d = Math.hypot(playerPos.x - art.data.coords.x, playerPos.z - art.data.coords.z);
-      if (d <= 3.2) {
+      if (d <= 4.0) {
         return { type: 'artifact', target: art };
       }
     }

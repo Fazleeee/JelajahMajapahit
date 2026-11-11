@@ -186,6 +186,9 @@ export class TouchControls {
       target.closest('#intro-overlay') ||
       target.closest('.hud-top-bar') ||
       target.closest('.unified-header-menu') ||
+      target.closest('.quest-detail-popover') ||
+      target.closest('.quest-complete-toast') ||
+      target.closest('.interact-prompt') ||
       target.closest('.minimap-frame') ||
       target.closest('.lore-modal') ||
       target.closest('.dialogue-modal') ||

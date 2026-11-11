@@ -249,24 +249,46 @@
       </div>
     </div>
 
-    <!-- RPG Dialogue Modal with Historical Figures -->
+    <!-- RPG Dialogue Modal with Historical Figures (Genshin Impact Style) -->
     <div id="dialogue-modal" class="dialogue-modal hidden">
-      <div class="dialogue-card">
-        <div class="dialogue-header">
-          <div class="speaker-avatar">
-            <span id="speaker-icon">⚔️</span>
-          </div>
-          <div class="speaker-info">
-            <div id="speaker-faction" class="speaker-faction">👑 KELUARGA KERATON</div>
-            <h3 id="speaker-name" class="speaker-name">Mahapatih Gajah Mada</h3>
-            <div id="speaker-title" class="speaker-title">Panglima Tertinggi Bhayangkara</div>
-          </div>
-          <button id="btn-dialogue-close" class="btn-dialogue-close" title="Tutup Dialog (E / Esc)">✕</button>
+      <div class="dialogue-genshin-container">
+        <!-- Top-Right Quick Exit / Close Pill -->
+        <div class="dialogue-top-actions">
+          <button id="btn-dialogue-close" class="btn-dialogue-close-pill" title="Tutup Dialog (E / Esc)">
+            <span>✕</span> Keluar
+          </button>
         </div>
-        <div class="dialogue-body">
-          <p id="dialogue-text" class="dialogue-text"></p>
+
+        <!-- Floating Choices Stack on Right Side (Genshin Impact Style) -->
+        <div class="dialogue-choices-dock">
+          <div id="dialogue-choices" class="dialogue-choices"></div>
         </div>
-        <div id="dialogue-choices" class="dialogue-choices"></div>
+
+        <!-- Bottom Cinematic Subtitle Bar -->
+        <div class="dialogue-card">
+          <div class="dialogue-nameplate">
+            <div class="speaker-avatar-mini">
+              <span id="speaker-icon">⚔️</span>
+            </div>
+            <div class="speaker-info">
+              <div class="speaker-title-row">
+                <h3 id="speaker-name" class="speaker-name">Mahapatih Gajah Mada</h3>
+                <span id="speaker-faction" class="speaker-faction">👑 KELUARGA KERATON</span>
+              </div>
+              <div class="speaker-ornament-line">
+                <span class="line-wing"></span>
+                <span class="diamond-mark">◆</span>
+                <span id="speaker-title" class="speaker-title">Panglima Tertinggi Bhayangkara</span>
+                <span class="diamond-mark">◆</span>
+                <span class="line-wing"></span>
+              </div>
+            </div>
+          </div>
+          <div class="dialogue-body">
+            <p id="dialogue-text" class="dialogue-text"></p>
+            <div class="dialogue-advance-hint">◆ Ketuk teks untuk percepat</div>
+          </div>
+        </div>
       </div>
     </div>
 

@@ -177,63 +177,112 @@ export const ARCH_COLLIDERS = [
 export const SOLID_COLLIDERS = [
   // 1. Kedaton Agung: Benteng Bata Merah Keliling (Tinggi 4.8m)
   // Tembok Utara Kedaton (z: -163)
-  { type: 'box', xMin: -46.5, xMax: 46.5, zMin: -164.5, zMax: -161.5, yMin: 2.0, yMax: 10.0 },
+  { type: 'box', xMin: -46.5, xMax: 46.5, zMin: -164.5, zMax: -161.5, yMin: 1.5, yMax: 10.0 },
   // Tembok Barat Kedaton (x: -45)
-  { type: 'box', xMin: -46.5, xMax: -43.5, zMin: -164.0, zMax: -67.0, yMin: 2.0, yMax: 10.0 },
+  { type: 'box', xMin: -46.5, xMax: -43.5, zMin: -164.0, zMax: -67.0, yMin: 1.5, yMax: 10.0 },
   // Tembok Timur Kedaton (x: 45)
-  { type: 'box', xMin: 43.5, xMax: 46.5, zMin: -164.0, zMax: -67.0, yMin: 2.0, yMax: 10.0 },
+  { type: 'box', xMin: 43.5, xMax: 46.5, zMin: -164.0, zMax: -67.0, yMin: 1.5, yMax: 10.0 },
   // Tembok Selatan Sayap Barat (Kiri Gerbang, x: -46.5..-4.5)
-  { type: 'box', xMin: -46.5, xMax: -4.5, zMin: -74.5, zMax: -71.5, yMin: 2.0, yMax: 10.0 },
+  { type: 'box', xMin: -46.5, xMax: -4.5, zMin: -74.5, zMax: -71.5, yMin: 1.5, yMax: 10.0 },
   // Tembok Selatan Sayap Timur (Kanan Gerbang, x: 4.5..46.5)
-  { type: 'box', xMin: 4.5, xMax: 46.5, zMin: -74.5, zMax: -71.5, yMin: 2.0, yMax: 10.0 },
+  { type: 'box', xMin: 4.5, xMax: 46.5, zMin: -74.5, zMax: -71.5, yMin: 1.5, yMax: 10.0 },
   // Pilar Gerbang Paduraksa Selatan Kedaton (Kiri & Kanan lorong tengah)
-  { type: 'box', xMin: -8.8, xMax: -4.5, zMin: -75.2, zMax: -70.8, yMin: 2.0, yMax: 12.0 },
-  { type: 'box', xMin: 4.5, xMax: 8.8, zMin: -75.2, zMax: -70.8, yMin: 2.0, yMax: 12.0 },
+  { type: 'box', xMin: -8.8, xMax: -4.2, zMin: -75.2, zMax: -70.8, yMin: 1.5, yMax: 12.0 },
+  { type: 'box', xMin: 4.2, xMax: 8.8, zMin: -75.2, zMax: -70.8, yMin: 1.5, yMax: 12.0 },
   // 4 Menara Sudut Bastion Kedaton
-  { type: 'box', xMin: -47.5, xMax: -42.5, zMin: -165.5, zMax: -160.5, yMin: 2.0, yMax: 12.0 },
-  { type: 'box', xMin: 42.5, xMax: 47.5, zMin: -165.5, zMax: -160.5, yMin: 2.0, yMax: 12.0 },
-  { type: 'box', xMin: -47.5, xMax: -42.5, zMin: -75.5, zMax: -70.5, yMin: 2.0, yMax: 12.0 },
-  { type: 'box', xMin: 42.5, xMax: 47.5, zMin: -75.5, zMax: -70.5, yMin: 2.0, yMax: 12.0 },
-  // Sandaran Singgasana Emas Hayam Wuruk
-  { type: 'box', xMin: -2.0, xMax: 2.0, zMin: -123.5, zMax: -121.5, yMin: 4.5, yMax: 9.0 },
+  { type: 'box', xMin: -47.5, xMax: -42.5, zMin: -165.5, zMax: -160.5, yMin: 1.5, yMax: 12.0 },
+  { type: 'box', xMin: 42.5, xMax: 47.5, zMin: -165.5, zMax: -160.5, yMin: 1.5, yMax: 12.0 },
+  { type: 'box', xMin: -47.5, xMax: -42.5, zMin: -75.5, zMax: -70.5, yMin: 1.5, yMax: 12.0 },
+  { type: 'box', xMin: 42.5, xMax: 47.5, zMin: -75.5, zMax: -70.5, yMin: 1.5, yMax: 12.0 },
+  // Sandaran Singgasana Emas Hayam Wuruk & Payung Upacara Kembar
+  { type: 'box', xMin: -2.0, xMax: 2.0, zMin: -123.5, zMax: -121.5, yMin: 4.0, yMax: 9.0 },
+  { type: 'circle', x: -2.4, z: -122.6, radius: 0.35, yMin: 4.0, yMax: 9.5 },
+  { type: 'circle', x: 2.4, z: -122.6, radius: 0.35, yMin: 4.0, yMax: 9.5 },
+  // 16 Pilar Kayu Jati Emas (Soko Guru) di Balairung Pendopo Kencana Kedaton
+  { type: 'circle', x: -10.5, z: -122.5, radius: 0.45, yMin: 3.5, yMax: 14.0 },
+  { type: 'circle', x: -3.5, z: -122.5, radius: 0.45, yMin: 3.5, yMax: 14.0 },
+  { type: 'circle', x: 3.5, z: -122.5, radius: 0.45, yMin: 3.5, yMax: 14.0 },
+  { type: 'circle', x: 10.5, z: -122.5, radius: 0.45, yMin: 3.5, yMax: 14.0 },
+  { type: 'circle', x: -10.5, z: -117.5, radius: 0.45, yMin: 3.5, yMax: 14.0 },
+  { type: 'circle', x: -3.5, z: -117.5, radius: 0.45, yMin: 3.5, yMax: 14.0 },
+  { type: 'circle', x: 3.5, z: -117.5, radius: 0.45, yMin: 3.5, yMax: 14.0 },
+  { type: 'circle', x: 10.5, z: -117.5, radius: 0.45, yMin: 3.5, yMax: 14.0 },
+  { type: 'circle', x: -10.5, z: -112.5, radius: 0.45, yMin: 3.5, yMax: 14.0 },
+  { type: 'circle', x: -3.5, z: -112.5, radius: 0.45, yMin: 3.5, yMax: 14.0 },
+  { type: 'circle', x: 3.5, z: -112.5, radius: 0.45, yMin: 3.5, yMax: 14.0 },
+  { type: 'circle', x: 10.5, z: -112.5, radius: 0.45, yMin: 3.5, yMax: 14.0 },
+  { type: 'circle', x: -10.5, z: -107.5, radius: 0.45, yMin: 3.5, yMax: 14.0 },
+  { type: 'circle', x: -3.5, z: -107.5, radius: 0.45, yMin: 3.5, yMax: 14.0 },
+  { type: 'circle', x: 3.5, z: -107.5, radius: 0.45, yMin: 3.5, yMax: 14.0 },
+  { type: 'circle', x: 10.5, z: -107.5, radius: 0.45, yMin: 3.5, yMax: 14.0 },
 
   // 2. Gerbang Candi Bentar Wringin Lawang (Menara Kembar Terbelah Bata Merah)
-  // Menara Barat (x: -5.0..-1.7, z: 35.8..40.2)
-  { type: 'box', xMin: -5.0, xMax: -1.7, zMin: 35.8, zMax: 40.2, yMin: 0.5, yMax: 16.0 },
-  // Menara Timur (x: 1.7..5.0, z: 35.8..40.2)
-  { type: 'box', xMin: 1.7, xMax: 5.0, zMin: 35.8, zMax: 40.2, yMin: 0.5, yMax: 16.0 },
+  // Menara Barat (x: -5.1..-1.5, z: 35.8..40.2)
+  { type: 'box', xMin: -5.1, xMax: -1.5, zMin: 35.8, zMax: 40.2, yMin: -2.0, yMax: 16.0 },
+  // Menara Timur (x: 1.5..5.1, z: 35.8..40.2)
+  { type: 'box', xMin: 1.5, xMax: 5.1, zMin: 35.8, zMax: 40.2, yMin: -2.0, yMax: 16.0 },
 
   // 3. Barak Pasukan Elit Bhayangkara (Markas Komando Militer Bata Merah, x: -98, z: 14)
-  { type: 'box', xMin: -105.2, xMax: -90.8, zMin: 9.3, zMax: 18.7, yMin: 0.5, yMax: 10.0 },
+  { type: 'box', xMin: -105.2, xMax: -90.8, zMin: 9.3, zMax: 18.7, yMin: -2.0, yMax: 10.0 },
+  // Dua Rak Tombak Prajurit di depan Barak
+  { type: 'box', xMin: -103.8, xMax: -101.2, zMin: 18.8, zMax: 19.6, yMin: -2.0, yMax: 6.0 },
+  { type: 'box', xMin: -94.8, xMax: -92.2, zMin: 18.8, zMax: 19.6, yMin: -2.0, yMax: 6.0 },
+  // Dua Meriam Putar Cetbang Perunggu di Pelataran Barak
+  { type: 'circle', x: -104.2, z: 20.8, radius: 0.75, yMin: -2.0, yMax: 5.0 },
+  { type: 'circle', x: -91.8, z: 20.8, radius: 0.75, yMin: -2.0, yMax: 5.0 },
 
-  // 4. Candi Bajang Ratu: Dinding Pilar Paduraksa Sisi Utara & Selatan Lorong
+  // 4. Candi Bajang Ratu: Dinding Pilar Paduraksa & Pipi Tangga
   // Sisi Selatan Lorong (z: -15.0..-11.6)
-  { type: 'box', xMin: 103.5, xMax: 112.5, zMin: -15.0, zMax: -11.6, yMin: 12.0, yMax: 22.0 },
+  { type: 'box', xMin: 103.5, xMax: 112.5, zMin: -15.0, zMax: -11.6, yMin: 9.0, yMax: 22.0 },
   // Sisi Utara Lorong (z: -8.4..-5.0)
-  { type: 'box', xMin: 103.5, xMax: 112.5, zMin: -8.4, zMax: -5.0, yMin: 12.0, yMax: 22.0 },
+  { type: 'box', xMin: 103.5, xMax: 112.5, zMin: -8.4, zMax: -5.0, yMin: 9.0, yMax: 22.0 },
+  // Pipi Tangga Barat (z: -12.7..-12.2 & -7.8..-7.3)
+  { type: 'box', xMin: 95.0, xMax: 103.0, zMin: -12.7, zMax: -12.2, yMin: 9.0, yMax: 16.0 },
+  { type: 'box', xMin: 95.0, xMax: 103.0, zMin: -7.8, zMax: -7.3, yMin: 9.0, yMax: 16.0 },
+  // Pipi Tangga Timur
+  { type: 'box', xMin: 113.0, xMax: 121.0, zMin: -12.7, zMax: -12.2, yMin: 9.0, yMax: 16.0 },
+  { type: 'box', xMin: 113.0, xMax: 121.0, zMin: -7.8, zMax: -7.3, yMin: 9.0, yMax: 16.0 },
 
-  // 5. Sanggar Pujangga (Meja Naskah Lontar Mpu Prapanca)
-  { type: 'box', xMin: 123.8, xMax: 128.2, zMin: -15.4, zMax: -13.8, yMin: 9.8, yMax: 12.0 },
+  // 5. Sanggar Pujangga (Meja Naskah Lontar & 6 Pilar Kayu Pendopo)
+  { type: 'box', xMin: 123.8, xMax: 128.2, zMin: -15.4, zMax: -13.8, yMin: 8.5, yMax: 13.0 },
+  { type: 'circle', x: 122.2, z: -16.8, radius: 0.35, yMin: 8.5, yMax: 16.0 },
+  { type: 'circle', x: 126.0, z: -16.8, radius: 0.35, yMin: 8.5, yMax: 16.0 },
+  { type: 'circle', x: 129.8, z: -16.8, radius: 0.35, yMin: 8.5, yMax: 16.0 },
+  { type: 'circle', x: 122.2, z: -11.2, radius: 0.35, yMin: 8.5, yMax: 16.0 },
+  { type: 'circle', x: 126.0, z: -11.2, radius: 0.35, yMin: 8.5, yMax: 16.0 },
+  { type: 'circle', x: 129.8, z: -11.2, radius: 0.35, yMin: 8.5, yMax: 16.0 },
 
-  // 6. Perkemahan Raden Wijaya Hutan Tarik (Lumbung Padi Kayu)
-  { type: 'box', xMin: -17.5, xMax: -14.5, zMin: 122.5, zMax: 125.5, yMin: 1.0, yMax: 7.0 },
+  // 6. Perkemahan Raden Wijaya Hutan Tarik (x: -16, z: 120)
+  // Dinding Belakang & Samping Pondok Kayu
+  { type: 'box', xMin: -19.3, xMax: -12.7, zMin: 117.1, zMax: 117.7, yMin: -2.0, yMax: 7.0 },
+  { type: 'box', xMin: -19.3, xMax: -18.9, zMin: 117.4, zMax: 120.6, yMin: -2.0, yMax: 7.0 },
+  // 6 Tiang Pondok Kayu Raden Wijaya
+  { type: 'circle', x: -19.1, z: 122.6, radius: 0.32, yMin: -2.0, yMax: 7.0 },
+  { type: 'circle', x: -16.0, z: 122.6, radius: 0.32, yMin: -2.0, yMax: 7.0 },
+  { type: 'circle', x: -12.9, z: 122.6, radius: 0.32, yMin: -2.0, yMax: 7.0 },
+  // Lumbung Padi Kayu (Koordinat Riil Dunia: x: -9.5, z: 117.5)
+  { type: 'box', xMin: -11.0, xMax: -8.0, zMin: 116.0, zMax: 119.0, yMin: -2.0, yMax: 8.0 },
+  // Api Unggun Batu Kuno (x: -16, z: 124.8)
+  { type: 'circle', x: -16.0, z: 124.8, radius: 1.25, yMin: -2.0, yMax: 5.0 },
 
   // 7. Pohon Maja Agung & Pohon Beringin Raksasa Majapahit (Batang Utama Kayu)
-  { type: 'circle', x: -16, z: 132, radius: 1.5, yMin: 0.5, yMax: 12.0 },
-  { type: 'circle', x: 16, z: 42, radius: 1.6, yMin: 0.5, yMax: 12.0 },
-  { type: 'circle', x: -20, z: -10, radius: 1.6, yMin: 0.5, yMax: 12.0 },
-  { type: 'circle', x: 22, z: -46, radius: 1.6, yMin: 0.5, yMax: 12.0 },
-  { type: 'circle', x: -22, z: -46, radius: 1.6, yMin: 0.5, yMax: 12.0 },
-  { type: 'circle', x: 88, z: 6, radius: 1.6, yMin: 0.5, yMax: 12.0 },
-  { type: 'circle', x: -92, z: 10, radius: 1.6, yMin: 0.5, yMax: 12.0 },
-  { type: 'circle', x: 26, z: 118, radius: 1.6, yMin: 0.5, yMax: 12.0 },
+  { type: 'circle', x: -16, z: 132, radius: 1.5, yMin: -2.0, yMax: 12.0 },
+  { type: 'circle', x: 16, z: 42, radius: 1.6, yMin: -2.0, yMax: 12.0 },
+  { type: 'circle', x: -20, z: -10, radius: 1.6, yMin: -2.0, yMax: 12.0 },
+  { type: 'circle', x: 22, z: -46, radius: 1.6, yMin: -2.0, yMax: 12.0 },
+  { type: 'circle', x: -22, z: -46, radius: 1.6, yMin: -2.0, yMax: 12.0 },
+  { type: 'circle', x: 88, z: 6, radius: 1.6, yMin: -2.0, yMax: 12.0 },
+  { type: 'circle', x: -92, z: 10, radius: 1.6, yMin: -2.0, yMax: 12.0 },
+  { type: 'circle', x: 26, z: 118, radius: 1.6, yMin: -2.0, yMax: 12.0 },
 
   // 8. Stan Meja Rempah & Koin Gobog Pasar Kotaraja
-  { type: 'box', xMin: 12.2, xMax: 15.8, zMin: 7.0, zMax: 9.0, yMin: 1.0, yMax: 3.5 },
-  { type: 'box', xMin: 20.2, xMax: 23.8, zMin: 6.0, zMax: 8.0, yMin: 1.0, yMax: 3.5 },
-  { type: 'box', xMin: 13.2, xMax: 16.8, zMin: 16.0, zMax: 18.0, yMin: 1.0, yMax: 3.5 },
-  { type: 'box', xMin: 21.2, xMax: 24.8, zMin: 15.0, zMax: 17.0, yMin: 1.0, yMax: 3.5 },
+  { type: 'box', xMin: 12.2, xMax: 15.8, zMin: 7.0, zMax: 9.0, yMin: -2.0, yMax: 4.5 },
+  { type: 'box', xMin: 20.2, xMax: 23.8, zMin: 6.0, zMax: 8.0, yMin: -2.0, yMax: 4.5 },
+  { type: 'box', xMin: 13.2, xMax: 16.8, zMin: 16.0, zMax: 18.0, yMin: -2.0, yMax: 4.5 },
+  { type: 'box', xMin: 21.2, xMax: 24.8, zMin: 15.0, zMax: 17.0, yMin: -2.0, yMax: 4.5 },
 
-  // 9. Kapal Layar Jung Jawa (Kabin Buritan Nakhoda)
-  { type: 'box', xMin: -142.5, xMax: -138.5, zMin: 14.2, zMax: 23.8, yMin: 1.0, yMax: 8.0 }
+  // 9. Kapal Layar Jung Jawa (Kabin Buritan Nakhoda & Tiang Layar Tanja Utama)
+  { type: 'box', xMin: -142.5, xMax: -138.5, zMin: 14.2, zMax: 23.8, yMin: 1.0, yMax: 9.0 },
+  { type: 'circle', x: -122.5, z: 19.0, radius: 0.55, yMin: 0.0, yMax: 25.0 },
+  { type: 'circle', x: -129.2, z: 19.0, radius: 0.60, yMin: 0.0, yMax: 25.0 }
 ];
