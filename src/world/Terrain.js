@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { WORLD_SIZE, BRIDGES, ARCH_COLLIDERS } from './WorldData.js';
 
 // Deterministic pseudo-noise helper
@@ -283,7 +284,11 @@ export class TerrainSystem {
   }
 
   buildWaterBodies() {
-    // Shared animated water material
+    this.waterUniforms = {
+      uTime: { value: 0 }
+    };
+
+    // Shared GPU-animated water material
     this.waterMaterial = new THREE.MeshStandardMaterial({
       color: new THREE.Color('#1f6e7a'),
       emissive: new THREE.Color('#09252c'),
@@ -293,21 +298,29 @@ export class TerrainSystem {
       opacity: 0.86
     });
 
+    // Offload wave vertex displacement 100% to GPU Vertex Shader (0% CPU usage!)
+    this.waterMaterial.onBeforeCompile = (shader) => {
+      shader.uniforms.uTime = this.waterUniforms.uTime;
+      shader.vertexShader = 'uniform float uTime;\n' + shader.vertexShader;
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+        transformed.y += sin(transformed.x * 0.12 + uTime * 1.8) * 0.07 + cos(transformed.z * 0.15 + uTime * 1.4) * 0.06;`
+      );
+    };
+
     // Main water plane covering river, Kolam Segaran, western harbor, and moat
-    const waterGeo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, 90, 90);
+    const waterGeo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, 80, 80);
     waterGeo.rotateX(-Math.PI / 2);
 
     this.waterMesh = new THREE.Mesh(waterGeo, this.waterMaterial);
     this.waterMesh.position.y = 0.25;
     this.waterMesh.receiveShadow = true;
     this.scene.add(this.waterMesh);
-
-    // Store initial water vertices for wave animation
-    this.waterPosAttr = waterGeo.attributes.position;
   }
 
   buildKolamSegaranWalls() {
-    // Iconic Majapahit Red-Brick Walls surrounding Kolam Segaran (x: -70..-34, z: -22..32)
+    // Iconic Majapahit Red-Brick Walls surrounding Kolam Segaran (merged for 2 draw calls)
     const brickMat = new THREE.MeshStandardMaterial({
       color: '#a83e2b',
       roughness: 0.85,
@@ -319,42 +332,37 @@ export class TerrainSystem {
       roughness: 0.8
     });
 
-    const group = new THREE.Group();
+    const brickGeos = [];
+    const capGeos = [];
 
     const walls = [
       { x: -52, z: -21.5, w: 36, d: 2.2 },   // North rim
-      { x: -63.0, z: 31.5, w: 14, d: 2.2 },  // South rim West half (leaves z=31.5, x=-56..-48 open for stairs)
+      { x: -63.0, z: 31.5, w: 14, d: 2.2 },  // South rim West half
       { x: -41.0, z: 31.5, w: 14, d: 2.2 },  // South rim East half
       { x: -69.5, z: 5, w: 2.2, d: 55 },     // West rim
-      { x: -34.5, z: -10.5, w: 2.2, d: 24 }, // East rim North half (leaves x=-34.5, z=1..9 open for stairs)
+      { x: -34.5, z: -10.5, w: 2.2, d: 24 }, // East rim North half
       { x: -34.5, z: 20.5, w: 2.2, d: 24 }   // East rim South half
     ];
 
     for (const w of walls) {
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w.w, 2.8, w.d), brickMat);
-      mesh.position.set(w.x, 1.1, w.z);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      group.add(mesh);
+      const wg = new THREE.BoxGeometry(w.w, 2.8, w.d);
+      wg.translate(w.x, 1.1, w.z);
+      brickGeos.push(wg);
 
-      const cap = new THREE.Mesh(new THREE.BoxGeometry(w.w + 0.3, 0.35, w.d + 0.3), capMat);
-      cap.position.set(w.x, 2.55, w.z);
-      group.add(cap);
+      const cg = new THREE.BoxGeometry(w.w + 0.3, 0.35, w.d + 0.3);
+      cg.translate(w.x, 2.55, w.z);
+      capGeos.push(cg);
     }
 
     // Undakan Tangga Bata Merah Kolam Segaran (Sisi Timur & Sisi Selatan)
     for (let s = 0; s < 8; s++) {
-      // Tangga Timur (x: -41.5 naik ke -34.5, z: 5)
-      const stepEast = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.35, 7.6), capMat);
-      stepEast.position.set(-41.5 + s * 1.0, -0.2 + s * 0.31, 5.0);
-      stepEast.receiveShadow = true;
-      group.add(stepEast);
+      const eg = new THREE.BoxGeometry(1.1, 0.35, 7.6);
+      eg.translate(-41.5 + s * 1.0, -0.2 + s * 0.31, 5.0);
+      capGeos.push(eg);
 
-      // Tangga Selatan (z: 24.5 naik ke 31.5, x: -52)
-      const stepSouth = new THREE.Mesh(new THREE.BoxGeometry(7.6, 0.35, 1.1), capMat);
-      stepSouth.position.set(-52.0, -0.2 + s * 0.31, 24.5 + s * 1.0);
-      stepSouth.receiveShadow = true;
-      group.add(stepSouth);
+      const sg = new THREE.BoxGeometry(7.6, 0.35, 1.1);
+      sg.translate(-52.0, -0.2 + s * 0.31, 24.5 + s * 1.0);
+      capGeos.push(sg);
     }
 
     // Pilar Pengapit Tangga Kolam Segaran
@@ -363,25 +371,38 @@ export class TerrainSystem {
       [-56.0, 31.5], [-48.0, 31.5]
     ];
     for (const [px, pz] of stairPillars) {
-      const sp = new THREE.Mesh(new THREE.BoxGeometry(2.6, 3.6, 2.6), brickMat);
-      sp.position.set(px, 1.6, pz);
-      sp.castShadow = true;
-      group.add(sp);
+      const spg = new THREE.BoxGeometry(2.6, 3.6, 2.6);
+      spg.translate(px, 1.6, pz);
+      brickGeos.push(spg);
     }
 
-    // Corner Majapahit Terracotta Pillars with Torch Braziers on Kolam Segaran
+    // Corner Majapahit Terracotta Pillars
     const corners = [
       [-69.5, -21.5], [-34.5, -21.5],
       [-69.5, 31.5], [-34.5, 31.5]
     ];
     for (const [cx, cz] of corners) {
-      const pillar = new THREE.Mesh(new THREE.BoxGeometry(3.2, 4.2, 3.2), brickMat);
-      pillar.position.set(cx, 1.9, cz);
-      pillar.castShadow = true;
-      group.add(pillar);
+      const pg = new THREE.BoxGeometry(3.2, 4.2, 3.2);
+      pg.translate(cx, 1.9, cz);
+      brickGeos.push(pg);
     }
 
-    this.scene.add(group);
+    const mergedBricks = mergeGeometries(brickGeos);
+    if (mergedBricks) {
+      const brickMesh = new THREE.Mesh(mergedBricks, brickMat);
+      brickMesh.castShadow = true;
+      brickMesh.receiveShadow = true;
+      this.scene.add(brickMesh);
+      brickGeos.forEach((g) => g.dispose());
+    }
+
+    const mergedCaps = mergeGeometries(capGeos);
+    if (mergedCaps) {
+      const capMesh = new THREE.Mesh(mergedCaps, capMat);
+      capMesh.receiveShadow = true;
+      this.scene.add(capMesh);
+      capGeos.forEach((g) => g.dispose());
+    }
   }
 
   buildBridgesAndPier() {
@@ -397,8 +418,16 @@ export class TerrainSystem {
       color: '#9e3b28',
       roughness: 0.82
     });
+    const stoneMat = new THREE.MeshStandardMaterial({
+      color: '#78726a',
+      roughness: 0.9,
+      flatShading: true
+    });
 
-    const bridgeGroup = new THREE.Group();
+    const woodGeos = [];
+    const darkWoodGeos = [];
+    const brickGeos = [];
+    const stoneGeos = [];
 
     for (const b of BRIDGES) {
       const width = b.xMax - b.xMin;
@@ -414,25 +443,20 @@ export class TerrainSystem {
         const arch = Math.sin(normZ * Math.PI) * b.archHeight;
         const y0 = baseDeckY + arch;
 
-        const plank = new THREE.Mesh(
-          new THREE.BoxGeometry(width, 0.35, segLen * 0.94),
-          woodMat
-        );
-        plank.position.set(centerX, y0 - 0.15, z0);
-        plank.castShadow = true;
-        plank.receiveShadow = true;
-        bridgeGroup.add(plank);
+        const pg = new THREE.BoxGeometry(width, 0.35, segLen * 0.94);
+        pg.translate(centerX, y0 - 0.15, z0);
+        woodGeos.push(pg);
 
         // Side posts every 3 planks
         if (i % 3 === 0 || i === steps - 1) {
           for (const side of [-1, 1]) {
-            const post = new THREE.Mesh(
-              new THREE.BoxGeometry(0.45, 2.4, 0.45),
-               i === 0 || i === steps - 1 ? brickMat : darkWoodMat
-            );
-            post.position.set(centerX + side * (width * 0.5 - 0.3), y0 + 0.8, z0);
-            post.castShadow = true;
-            bridgeGroup.add(post);
+            const postGeo = new THREE.BoxGeometry(0.45, 2.4, 0.45);
+            postGeo.translate(centerX + side * (width * 0.5 - 0.3), y0 + 0.8, z0);
+            if (i === 0 || i === steps - 1) {
+              brickGeos.push(postGeo);
+            } else {
+              darkWoodGeos.push(postGeo);
+            }
           }
         }
       }
@@ -441,54 +465,55 @@ export class TerrainSystem {
       for (const frac of [0.2, 0.5, 0.8]) {
         const pz = b.zMin + frac * length;
         for (const side of [-1, 1]) {
-          const pier = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.45, 0.55, 6, 8),
-            darkWoodMat
-          );
-          pier.position.set(centerX + side * (width * 0.38), 0.5, pz);
-          bridgeGroup.add(pier);
+          const pierGeo = new THREE.CylinderGeometry(0.45, 0.55, 6, 8);
+          pierGeo.translate(centerX + side * (width * 0.38), 0.5, pz);
+          darkWoodGeos.push(pierGeo);
         }
       }
     }
 
     // Western Dermaga Jung Wooden Pier (x: -135..-114, z: 12..26)
-    const pierDeck = new THREE.Mesh(new THREE.BoxGeometry(22, 0.45, 14), woodMat);
-    pierDeck.position.set(-124.5, 1.65, 19);
-    pierDeck.castShadow = true;
-    pierDeck.receiveShadow = true;
-    bridgeGroup.add(pierDeck);
+    const pierDeckGeo = new THREE.BoxGeometry(22, 0.45, 14);
+    pierDeckGeo.translate(-124.5, 1.65, 19);
+    woodGeos.push(pierDeckGeo);
 
     for (let px = -133; px <= -116; px += 5.5) {
       for (const pz of [13, 25]) {
-        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.45, 5.2, 8), darkWoodMat);
-        post.position.set(px, 0.6, pz);
-        bridgeGroup.add(post);
+        const postGeo = new THREE.CylinderGeometry(0.4, 0.45, 5.2, 8);
+        postGeo.translate(px, 0.6, pz);
+        darkWoodGeos.push(postGeo);
       }
     }
 
-    // Stepping stones across the western shallow bend of Sungai Brantas (around x = -52, z = 58..80)
-    const stoneMat = new THREE.MeshStandardMaterial({ color: '#78726a', roughness: 0.9, flatShading: true });
+    // Stepping stones across Sungai Brantas
     for (let sz = 57; sz <= 81; sz += 3.2) {
-      const stone = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.5, 1.2, 7), stoneMat);
-      stone.position.set(-52 + Math.sin(sz * 0.5) * 1.2, 0.05, sz);
-      stone.receiveShadow = true;
-      bridgeGroup.add(stone);
+      const stoneGeo = new THREE.CylinderGeometry(1.2, 1.5, 1.2, 7);
+      stoneGeo.translate(-52 + Math.sin(sz * 0.5) * 1.2, 0.05, sz);
+      stoneGeos.push(stoneGeo);
     }
 
-    this.scene.add(bridgeGroup);
+    const finalizeMerged = (geos, mat, castShadow, receiveShadow) => {
+      if (geos.length === 0) return;
+      const merged = mergeGeometries(geos);
+      if (merged) {
+        const mesh = new THREE.Mesh(merged, mat);
+        mesh.castShadow = castShadow;
+        mesh.receiveShadow = receiveShadow;
+        this.scene.add(mesh);
+      }
+      geos.forEach((g) => g.dispose());
+    };
+
+    finalizeMerged(woodGeos, woodMat, true, true);
+    finalizeMerged(darkWoodGeos, darkWoodMat, true, false);
+    finalizeMerged(brickGeos, brickMat, true, false);
+    finalizeMerged(stoneGeos, stoneMat, false, true);
   }
 
   update(elapsedTime) {
-    // Gentle ripple animation on water vertices (direct TypedArray access for 4x faster loop)
-    const pos = this.waterPosAttr;
-    const arr = pos.array;
-    const t1 = elapsedTime * 1.8;
-    const t2 = elapsedTime * 1.4;
-    for (let i = 0, len = arr.length; i < len; i += 3) {
-      const x = arr[i];
-      const z = arr[i + 2];
-      arr[i + 1] = Math.sin(x * 0.12 + t1) * 0.07 + Math.cos(z * 0.15 + t2) * 0.06;
+    // Update single GPU uniform float instead of 8,281 CPU vertex iterations!
+    if (this.waterUniforms) {
+      this.waterUniforms.uTime.value = elapsedTime;
     }
-    pos.needsUpdate = true;
   }
 }

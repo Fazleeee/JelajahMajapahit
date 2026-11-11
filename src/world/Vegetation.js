@@ -3,12 +3,23 @@ import { getTerrainHeight, getRoadFactor } from './Terrain.js';
 import { LANDMARKS } from './WorldData.js';
 
 export class VegetationAndNatureSystem {
-  constructor(scene) {
+  constructor(scene, isMobile = false) {
     this.scene = scene;
-    this.flameMeshes = [];
-    this.torchLights = [];
+    this.isMobile = isMobile;
     this.beaconRings = [];
     this.colliders = [];
+
+    // GPU Shader uniform for flames & ambient fireflies (0% CPU loop cost!)
+    this.vegetationUniforms = {
+      uTime: { value: 0 }
+    };
+
+    // Pooled dynamic lights for torches (3 active nearest PointLights instead of 13+)
+    this.torchPositions = [];
+    this.torchLightPool = [];
+    this._nearestTorchIdx = [0, 1, 2];
+    this._lastLightPlayerX = Infinity;
+    this._lastLightPlayerZ = Infinity;
 
     this.initSharedMaterials();
     this.buildSacredMajaTree();
@@ -60,7 +71,43 @@ export class VegetationAndNatureSystem {
       roughness: 0.3,
       metalness: 0.75
     });
+
+    // GPU Vertex Shader flickering flame material for InstancedMesh torches
     this.flameMat = new THREE.MeshBasicMaterial({ color: '#ffae33' });
+    this.flameMat.onBeforeCompile = (shader) => {
+      shader.uniforms.uTime = this.vegetationUniforms.uTime;
+      shader.vertexShader = 'uniform float uTime;\n' + shader.vertexShader;
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+        float flickerPhase = 0.0;
+        #ifdef USE_INSTANCING
+          flickerPhase = instanceMatrix[3][0] * 0.37 + instanceMatrix[3][2] * 0.53;
+        #endif
+        float sx = 0.88 + sin(uTime * 11.0 + flickerPhase) * 0.16;
+        float sy = 0.90 + cos(uTime * 14.0 + flickerPhase) * 0.20;
+        transformed.x *= sx;
+        transformed.z *= sx;
+        transformed.y *= sy;`
+      );
+    };
+  }
+
+  createInstancedGroup(geo, mat, matrices, castShadow = false, receiveShadow = false) {
+    if (matrices.length === 0) {
+      geo.dispose();
+      return null;
+    }
+    const im = new THREE.InstancedMesh(geo, mat, matrices.length);
+    for (let i = 0; i < matrices.length; i++) {
+      im.setMatrixAt(i, matrices[i]);
+    }
+    im.instanceMatrix.needsUpdate = true;
+    im.castShadow = castShadow;
+    im.receiveShadow = receiveShadow;
+    if (im.computeBoundingSphere) im.computeBoundingSphere();
+    this.scene.add(im);
+    return im;
   }
 
   // 1. Iconic Sacred Pohon Maja Agung in Hutan Tarik (-16, 132)
@@ -71,7 +118,6 @@ export class VegetationAndNatureSystem {
     const group = new THREE.Group();
     group.position.set(x, y, z);
 
-    // Ancient stone ring around the tree
     const baseRing = new THREE.Mesh(
       new THREE.CylinderGeometry(3.8, 4.4, 0.7, 12),
       this.brickMat
@@ -80,7 +126,6 @@ export class VegetationAndNatureSystem {
     baseRing.receiveShadow = true;
     group.add(baseRing);
 
-    // Main gnarled trunk
     const trunk = new THREE.Mesh(
       new THREE.CylinderGeometry(0.85, 1.45, 7.5, 9),
       this.banyanTrunkMat
@@ -89,7 +134,6 @@ export class VegetationAndNatureSystem {
     trunk.castShadow = true;
     group.add(trunk);
 
-    // Multi-layered lush canopy
     const canopyOffsets = [
       [0, 8.2, 0, 4.4],
       [-2.4, 7.2, 1.5, 3.2],
@@ -98,23 +142,24 @@ export class VegetationAndNatureSystem {
       [-1.5, 7.0, -2.2, 2.9]
     ];
 
+    const crownGeo = new THREE.DodecahedronGeometry(1.0, 1);
     for (const [cx, cy, cz, r] of canopyOffsets) {
-      const crown = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 1), this.leafBrightMat);
+      const crown = new THREE.Mesh(crownGeo, this.leafBrightMat);
       crown.position.set(cx, cy, cz);
-      crown.scale.y = 0.78;
+      crown.scale.set(r, r * 0.78, r);
       crown.castShadow = true;
       crown.receiveShadow = true;
       group.add(crown);
     }
 
-    // Hanging Iconic Maja Fruits (Buah Maja)
+    const fruitGeo = new THREE.SphereGeometry(0.38, 8, 8);
     const fruitCoords = [
       [-2.2, 5.5, 1.8], [2.1, 5.7, 1.5], [0.4, 5.3, 2.7],
       [-1.8, 5.6, -2.0], [2.4, 5.4, -1.5], [0, 5.9, -2.5],
       [1.4, 5.2, 0.9], [-1.2, 5.1, 0.6]
     ];
     for (const [fx, fy, fz] of fruitCoords) {
-      const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.38, 10, 10), this.majaFruitMat);
+      const fruit = new THREE.Mesh(fruitGeo, this.majaFruitMat);
       fruit.position.set(fx, fy, fz);
       group.add(fruit);
     }
@@ -134,52 +179,91 @@ export class VegetationAndNatureSystem {
       [26, 118]    // Deep Hutan Tarik
     ];
 
+    const trunkMatrices = [];
+    const rootMatrices = [];
+    const foliageMatrices = [];
+
+    const parentObj = new THREE.Object3D();
+    const childObj = new THREE.Object3D();
+    parentObj.add(childObj);
+
+    const puffs = [
+      [0, 9.0, 0, 5.2],
+      [-3.2, 7.8, 1.8, 3.8],
+      [3.2, 7.9, -1.6, 3.8],
+      [1.5, 7.6, 3.0, 3.5],
+      [-1.8, 7.7, -2.8, 3.6]
+    ];
+
     for (const [bx, bz] of banyanLocations) {
       const by = getTerrainHeight(bx, bz);
-      const banyan = new THREE.Group();
-      banyan.position.set(bx, by, bz);
+      parentObj.position.set(bx, by, bz);
+      parentObj.rotation.set(0, 0, 0);
+      parentObj.scale.setScalar(1);
 
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.8, 8.5, 9), this.banyanTrunkMat);
-      trunk.position.y = 4.2;
-      trunk.castShadow = true;
-      banyan.add(trunk);
+      // Trunk
+      childObj.position.set(0, 4.2, 0);
+      childObj.rotation.set(0, 0, 0);
+      childObj.scale.setScalar(1);
+      parentObj.updateMatrixWorld(true);
+      trunkMatrices.push(childObj.matrixWorld.clone());
 
-      // Hanging aerial roots (Akar Gantung Beringin)
+      // Aerial roots
       for (let i = 0; i < 6; i++) {
         const angle = (i / 6) * Math.PI * 2;
-        const rx = Math.cos(angle) * 2.3;
-        const rz = Math.sin(angle) * 2.3;
-        const root = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 5.5, 5), this.banyanTrunkMat);
-        root.position.set(rx, 2.75, rz);
-        banyan.add(root);
+        childObj.position.set(Math.cos(angle) * 2.3, 2.75, Math.sin(angle) * 2.3);
+        childObj.rotation.set(0, 0, 0);
+        childObj.scale.setScalar(1);
+        parentObj.updateMatrixWorld(true);
+        rootMatrices.push(childObj.matrixWorld.clone());
       }
 
-      // Broad layered canopy
-      const puffs = [
-        [0, 9.0, 0, 5.2],
-        [-3.2, 7.8, 1.8, 3.8],
-        [3.2, 7.9, -1.6, 3.8],
-        [1.5, 7.6, 3.0, 3.5],
-        [-1.8, 7.7, -2.8, 3.6]
-      ];
+      // Canopy puffs
       for (const [px, py, pz, pr] of puffs) {
-        const foliage = new THREE.Mesh(new THREE.DodecahedronGeometry(pr, 1), this.leafBanyanMat);
-        foliage.position.set(px, py, pz);
-        foliage.scale.y = 0.7;
-        foliage.castShadow = true;
-        foliage.receiveShadow = true;
-        banyan.add(foliage);
+        childObj.position.set(px, py, pz);
+        childObj.rotation.set(0, 0, 0);
+        childObj.scale.set(pr, pr * 0.7, pr);
+        parentObj.updateMatrixWorld(true);
+        foliageMatrices.push(childObj.matrixWorld.clone());
       }
-
-      this.scene.add(banyan);
     }
+
+    this.createInstancedGroup(
+      new THREE.CylinderGeometry(1.1, 1.8, 8.5, 9),
+      this.banyanTrunkMat,
+      trunkMatrices,
+      true,
+      false
+    );
+    this.createInstancedGroup(
+      new THREE.CylinderGeometry(0.12, 0.18, 5.5, 5),
+      this.banyanTrunkMat,
+      rootMatrices,
+      false,
+      false
+    );
+    this.createInstancedGroup(
+      new THREE.DodecahedronGeometry(1.0, 1),
+      this.leafBanyanMat,
+      foliageMatrices,
+      !this.isMobile,
+      true
+    );
   }
 
-  // 3. Procedural Forest Trees, Maja Trees, and Coconut Palms across the 5 Zones
+  // 3. Instanced Procedural Forest Trees, Maja Trees, and Coconut Palms (Collapses 1600+ meshes into 6 draw calls!)
   populateForestAndPalms() {
-    const treeGroup = new THREE.Group();
+    const trunkMatrices = [];
+    const lushCrownMatrices = [];
+    const brightCrownMatrices = [];
+    const majaFruitMatrices = [];
+    const palmTrunkMatrices = [];
+    const palmFrondMatrices = [];
 
-    // Deterministic scatter for 240 trees across the 440x440 world
+    const parentObj = new THREE.Object3D();
+    const childObj = new THREE.Object3D();
+    parentObj.add(childObj);
+
     for (let i = 0; i < 240; i++) {
       const seed1 = Math.sin(i * 78.233) * 43758.5453;
       const seed2 = Math.cos(i * 45.164) * 23421.6312;
@@ -189,17 +273,35 @@ export class VegetationAndNatureSystem {
       const ry = getTerrainHeight(rx, rz);
       const roadFactor = getRoadFactor(rx, rz);
 
-      // Don't place trees underwater, on roads, or inside protected structures
       if (ry < 0.75 || roadFactor > 0.18 || this.isInsideProtectedArea(rx, rz)) continue;
 
       const scale = 0.8 + (i % 7) * 0.12;
+      parentObj.position.set(rx, ry, rz);
+      parentObj.scale.setScalar(scale);
 
-      // Near riverbanks or harbor -> Coconut Palm Tree
       if (ry < 1.55 || (rx < -85 && Math.abs(rz - 20) < 45)) {
-        const palm = this.createCoconutPalm(scale);
-        palm.position.set(rx, ry, rz);
-        palm.rotation.y = (i * 1.7) % (Math.PI * 2);
-        treeGroup.add(palm);
+        // Coconut Palm Tree
+        parentObj.rotation.set(0, (i * 1.7) % (Math.PI * 2), 0);
+
+        for (let s = 0; s < 5; s++) {
+          const trunkScaleFactor = 1.0 - s * 0.1;
+          childObj.position.set(s * 0.14, s * 1.15 + 0.6, 0);
+          childObj.rotation.set(0, 0, -s * 0.06);
+          childObj.scale.set(trunkScaleFactor, 1, trunkScaleFactor);
+          parentObj.updateMatrixWorld(true);
+          palmTrunkMatrices.push(childObj.matrixWorld.clone());
+        }
+
+        const topX = 0.6;
+        const topY = 5.8;
+        for (let f = 0; f < 6; f++) {
+          const angle = (f / 6) * Math.PI * 2;
+          childObj.position.set(topX + Math.cos(angle) * 1.1, topY - 0.15, Math.sin(angle) * 1.1);
+          childObj.rotation.set(0, -angle, -0.38);
+          childObj.scale.setScalar(1);
+          parentObj.updateMatrixWorld(true);
+          palmFrondMatrices.push(childObj.matrixWorld.clone());
+        }
 
         this.colliders.push({
           type: 'circle',
@@ -210,12 +312,42 @@ export class VegetationAndNatureSystem {
           yMax: ry + 8.0
         });
       } else {
-        // Tropical Hardwood or Maja Tree (in Hutan Tarik z > 80)
+        // Tropical Hardwood or Maja Tree
         const hasMajaFruit = rz > 80 && i % 3 === 0;
-        const tree = this.createTropicalTree(scale, hasMajaFruit);
-        tree.position.set(rx, ry, rz);
-        tree.rotation.y = (i * 2.3) % (Math.PI * 2);
-        treeGroup.add(tree);
+        parentObj.rotation.set(0, (i * 2.3) % (Math.PI * 2), 0);
+
+        // Trunk
+        childObj.position.set(0, 2.1, 0);
+        childObj.rotation.set(0, 0, 0);
+        childObj.scale.setScalar(1);
+        parentObj.updateMatrixWorld(true);
+        trunkMatrices.push(childObj.matrixWorld.clone());
+
+        // Main crown
+        const crownTarget = hasMajaFruit ? brightCrownMatrices : lushCrownMatrices;
+        childObj.position.set(0, 4.6, 0);
+        childObj.rotation.set(0, 0, 0);
+        childObj.scale.set(2.3, 2.3 * 0.82, 2.3);
+        parentObj.updateMatrixWorld(true);
+        crownTarget.push(childObj.matrixWorld.clone());
+
+        // Sub crown
+        childObj.position.set(1.1, 3.9, 0.6);
+        childObj.rotation.set(0, 0, 0);
+        childObj.scale.setScalar(1.65);
+        parentObj.updateMatrixWorld(true);
+        crownTarget.push(childObj.matrixWorld.clone());
+
+        if (hasMajaFruit) {
+          for (let f = 0; f < 3; f++) {
+            const angle = (f / 3) * Math.PI * 2;
+            childObj.position.set(Math.cos(angle) * 1.3, 3.5, Math.sin(angle) * 1.3);
+            childObj.rotation.set(0, 0, 0);
+            childObj.scale.setScalar(1);
+            parentObj.updateMatrixWorld(true);
+            majaFruitMatrices.push(childObj.matrixWorld.clone());
+          }
+        }
 
         this.colliders.push({
           type: 'circle',
@@ -228,81 +360,58 @@ export class VegetationAndNatureSystem {
       }
     }
 
-    this.scene.add(treeGroup);
+    const castTreeShadow = !this.isMobile;
+    this.createInstancedGroup(
+      new THREE.CylinderGeometry(0.32, 0.55, 4.2, 7),
+      this.trunkMat,
+      trunkMatrices,
+      castTreeShadow,
+      false
+    );
+    this.createInstancedGroup(
+      new THREE.DodecahedronGeometry(1.0, 1),
+      this.leafLushMat,
+      lushCrownMatrices,
+      castTreeShadow,
+      true
+    );
+    this.createInstancedGroup(
+      new THREE.DodecahedronGeometry(1.0, 1),
+      this.leafBrightMat,
+      brightCrownMatrices,
+      castTreeShadow,
+      true
+    );
+    this.createInstancedGroup(
+      new THREE.SphereGeometry(0.24, 6, 6),
+      this.majaFruitMat,
+      majaFruitMatrices,
+      false,
+      false
+    );
+    this.createInstancedGroup(
+      new THREE.CylinderGeometry(0.27, 0.31, 1.25, 6),
+      this.palmTrunkMat,
+      palmTrunkMatrices,
+      castTreeShadow,
+      false
+    );
+    this.createInstancedGroup(
+      new THREE.BoxGeometry(2.4, 0.12, 0.55),
+      this.leafBrightMat,
+      palmFrondMatrices,
+      false,
+      false
+    );
   }
 
-  createTropicalTree(scale = 1, withMajaFruit = false) {
-    const g = new THREE.Group();
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.32 * scale, 0.55 * scale, 4.2 * scale, 7), this.trunkMat);
-    trunk.position.y = 2.1 * scale;
-    trunk.castShadow = true;
-    g.add(trunk);
-
-    const mat = withMajaFruit ? this.leafBrightMat : this.leafLushMat;
-    const mainCrown = new THREE.Mesh(new THREE.DodecahedronGeometry(2.3 * scale, 1), mat);
-    mainCrown.position.y = 4.6 * scale;
-    mainCrown.scale.y = 0.82;
-    mainCrown.castShadow = true;
-    g.add(mainCrown);
-
-    const subCrown = new THREE.Mesh(new THREE.DodecahedronGeometry(1.65 * scale, 1), mat);
-    subCrown.position.set(1.1 * scale, 3.9 * scale, 0.6 * scale);
-    subCrown.castShadow = true;
-    g.add(subCrown);
-
-    if (withMajaFruit) {
-      for (let f = 0; f < 3; f++) {
-        const angle = (f / 3) * Math.PI * 2;
-        const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.24 * scale, 7, 7), this.majaFruitMat);
-        fruit.position.set(Math.cos(angle) * 1.3 * scale, 3.5 * scale, Math.sin(angle) * 1.3 * scale);
-        g.add(fruit);
-      }
-    }
-
-    return g;
-  }
-
-  createCoconutPalm(scale = 1) {
-    const g = new THREE.Group();
-
-    // Slightly curved segmented palm trunk
-    for (let s = 0; s < 5; s++) {
-      const seg = new THREE.Mesh(
-        new THREE.CylinderGeometry((0.28 - s * 0.03) * scale, (0.32 - s * 0.03) * scale, 1.25 * scale, 7),
-        this.palmTrunkMat
-      );
-      seg.position.set(s * 0.14 * scale, (s * 1.15 + 0.6) * scale, 0);
-      seg.rotation.z = -s * 0.06;
-      seg.castShadow = true;
-      g.add(seg);
-    }
-
-    const topX = 0.6 * scale;
-    const topY = 5.8 * scale;
-
-    // Palm fronds
-    for (let f = 0; f < 6; f++) {
-      const angle = (f / 6) * Math.PI * 2;
-      const frond = new THREE.Mesh(new THREE.BoxGeometry(2.4 * scale, 0.12 * scale, 0.55 * scale), this.leafBrightMat);
-      frond.position.set(
-        topX + Math.cos(angle) * 1.1 * scale,
-        topY - 0.15 * scale,
-        Math.sin(angle) * 1.1 * scale
-      );
-      frond.rotation.y = -angle;
-      frond.rotation.z = -0.38;
-      frond.castShadow = true;
-      g.add(frond);
-    }
-
-    return g;
-  }
-
-  // 4. River Rocks, Highland Boulders, and Lotus Pads on Kolam Segaran
+  // 4. Instanced River Rocks, Highland Boulders, and Lotus Pads on Kolam Segaran (3 Draw Calls!)
   populateRocksAndLotus() {
-    const group = new THREE.Group();
+    const rockMatrices = [];
+    const padMatrices = [];
+    const flowerMatrices = [];
+    const dummy = new THREE.Object3D();
 
-    // Boulders along riverbanks and hills
     for (let i = 0; i < 95; i++) {
       const s1 = Math.sin(i * 19.19) * 9876.54;
       const s2 = Math.cos(i * 37.73) * 5432.19;
@@ -311,16 +420,14 @@ export class VegetationAndNatureSystem {
       const ry = getTerrainHeight(rx, rz);
 
       if (getRoadFactor(rx, rz) > 0.1 || ry < -0.5 || this.isInsideProtectedArea(rx, rz)) continue;
-      if (Math.hypot(rx - -48, rz - 68) < 4.5) continue; // Bebaskan area Prasasti Kudadu
+      if (Math.hypot(rx - -48, rz - 68) < 4.5) continue;
 
       const rSize = 0.5 + (i % 5) * 0.35;
-      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(rSize, 0), this.rockMat);
-      rock.position.set(rx, ry + rSize * 0.35, rz);
-      rock.scale.set(1.2, 0.75, 1.0);
-      rock.rotation.set(i * 0.4, i * 1.1, 0);
-      rock.castShadow = true;
-      rock.receiveShadow = true;
-      group.add(rock);
+      dummy.position.set(rx, ry + rSize * 0.35, rz);
+      dummy.scale.set(rSize * 1.2, rSize * 0.75, rSize * 1.0);
+      dummy.rotation.set(i * 0.4, i * 1.1, 0);
+      dummy.updateMatrix();
+      rockMatrices.push(dummy.matrix.clone());
 
       if (rSize >= 0.75) {
         this.colliders.push({
@@ -334,7 +441,6 @@ export class VegetationAndNatureSystem {
       }
     }
 
-    // Lotus pads floating on Kolam Segaran (x: -66..-38, z: -18..28)
     const lotusPadMat = new THREE.MeshStandardMaterial({ color: '#3b8c40', roughness: 0.7 });
     const lotusFlowerMat = new THREE.MeshStandardMaterial({ color: '#f582ae', emissive: '#4d1429', roughness: 0.4 });
 
@@ -342,54 +448,79 @@ export class VegetationAndNatureSystem {
       const lx = -64 + (i % 6) * 4.6 + Math.sin(i) * 1.2;
       const lz = -15 + Math.floor(i / 6) * 11.5 + Math.cos(i) * 1.5;
 
-      const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.06, 10), lotusPadMat);
-      pad.position.set(lx, 0.3, lz);
-      group.add(pad);
+      dummy.position.set(lx, 0.3, lz);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.setScalar(1);
+      dummy.updateMatrix();
+      padMatrices.push(dummy.matrix.clone());
 
       if (i % 2 === 0) {
-        const flower = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.35, 7), lotusFlowerMat);
-        flower.position.set(lx, 0.46, lz);
-        group.add(flower);
+        dummy.position.set(lx, 0.46, lz);
+        dummy.updateMatrix();
+        flowerMatrices.push(dummy.matrix.clone());
       }
     }
 
-    this.scene.add(group);
+    this.createInstancedGroup(
+      new THREE.DodecahedronGeometry(1.0, 0),
+      this.rockMat,
+      rockMatrices,
+      !this.isMobile,
+      true
+    );
+    this.createInstancedGroup(
+      new THREE.CylinderGeometry(0.85, 0.85, 0.06, 10),
+      lotusPadMat,
+      padMatrices,
+      false,
+      false
+    );
+    this.createInstancedGroup(
+      new THREE.ConeGeometry(0.28, 0.35, 7),
+      lotusFlowerMat,
+      flowerMatrices,
+      false,
+      false
+    );
   }
 
-  // 5. Royal Majapahit Terracotta Torches along roads and bridges
+  // 5. Royal Majapahit Terracotta Torches with InstancedMesh + 3 Pooled PointLights (Saves 77% Light Cost!)
   buildRoyalTorches() {
     const torchCoords = [
-      // Hutan Tarik road & Bridge South
       [-5.5, 136], [5.5, 136],
       [-5.5, 110], [5.5, 110],
       [-6.5, 89], [6.5, 89],
-      // Bridge North & Wringin Lawang Avenue
       [-6.5, 53], [6.5, 53],
       [-6.0, 26], [6.0, 26],
       [-6.0, 0], [6.0, 0],
       [-6.0, -28], [6.0, -28],
-      // Kedaton Moat Bridge
       [-6.2, -53], [6.2, -53],
       [-6.2, -75], [6.2, -75],
       [-8.0, -105], [8.0, -105],
-      // East Road to Lembah Candi
       [35, -8], [65, -8], [95, -10],
-      // West Road to Dermaga Jung
       [-35, -1], [-78, 2], [-112, 16]
     ];
 
-    const torchGroup = new THREE.Group();
+    const pillarMatrices = [];
+    const flameMatrices = [];
+    const dummy = new THREE.Object3D();
 
-    torchCoords.forEach(([tx, tz], idx) => {
+    torchCoords.forEach(([tx, tz]) => {
       const ty = getTerrainHeight(tx, tz);
-      const stand = new THREE.Group();
-      stand.position.set(tx, ty, tz);
 
-      // Brick pillar base
-      const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.85, 2.2, 0.85), this.brickMat);
-      pillar.position.y = 1.1;
-      pillar.castShadow = true;
-      stand.add(pillar);
+      // Stand base
+      dummy.position.set(tx, ty + 1.1, tz);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.setScalar(1);
+      dummy.updateMatrix();
+      pillarMatrices.push(dummy.matrix.clone());
+
+      // Flame cone
+      dummy.position.set(tx, ty + 2.55, tz);
+      dummy.updateMatrix();
+      flameMatrices.push(dummy.matrix.clone());
+
+      this.torchPositions.push({ x: tx, y: ty + 2.9, z: tz });
 
       this.colliders.push({
         type: 'circle',
@@ -399,71 +530,89 @@ export class VegetationAndNatureSystem {
         yMin: -2.0,
         yMax: ty + 5.0
       });
-
-      // Flame cone
-      const flame = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.78, 7), this.flameMat);
-      flame.position.y = 2.55;
-      stand.add(flame);
-      this.flameMeshes.push({ mesh: flame, phase: idx * 0.9 });
-
-      // Add real PointLight on key torches for atmospheric night/sunset glow
-      if (idx % 2 === 0) {
-        const light = new THREE.PointLight('#ff8c2b', 1.4, 24, 1.6);
-        light.position.set(0, 2.9, 0);
-        stand.add(light);
-        this.torchLights.push(light);
-      }
-
-      torchGroup.add(stand);
     });
 
-    this.scene.add(torchGroup);
+    this.createInstancedGroup(
+      new THREE.BoxGeometry(0.85, 2.2, 0.85),
+      this.brickMat,
+      pillarMatrices,
+      !this.isMobile,
+      false
+    );
+    this.createInstancedGroup(
+      new THREE.ConeGeometry(0.32, 0.78, 7),
+      this.flameMat,
+      flameMatrices,
+      false,
+      false
+    );
+
+    // 3 Pooled PointLights that dynamically track the 3 closest torches to the player
+    const poolSize = 3;
+    for (let i = 0; i < poolSize; i++) {
+      const light = new THREE.PointLight('#ff8c2b', 1.4, 28, 1.5);
+      const tPos = this.torchPositions[i] || { x: 0, y: 4, z: 136 };
+      light.position.set(tPos.x, tPos.y, tPos.z);
+      this.scene.add(light);
+      this.torchLightPool.push(light);
+    }
   }
 
-  // 6. Historical Signposts / Prasasti Markers at the 6 Landmarks
+  // 6. Historical Signposts / Prasasti Markers at the 10 Landmarks
   buildHistoricalSignposts() {
-    const group = new THREE.Group();
+    const baseMatrices = [];
+    const bodyMatrices = [];
+    const dummy = new THREE.Object3D();
+    const ringGeo = new THREE.RingGeometry(1.8, 2.15, 24);
+    ringGeo.rotateX(-Math.PI / 2);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: '#f9d976',
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.65
+    });
+    const emblemGeo = new THREE.OctahedronGeometry(0.38, 0);
 
     LANDMARKS.forEach((lm, idx) => {
       const y = getTerrainHeight(lm.position.x, lm.position.z);
+      const baseY = Math.max(y, 1.6);
+
+      dummy.position.set(lm.position.x, baseY + 0.25, lm.position.z);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.setScalar(1);
+      dummy.updateMatrix();
+      baseMatrices.push(dummy.matrix.clone());
+
+      dummy.position.set(lm.position.x, baseY + 1.5, lm.position.z);
+      dummy.updateMatrix();
+      bodyMatrices.push(dummy.matrix.clone());
+
       const marker = new THREE.Group();
-      marker.position.set(lm.position.x, Math.max(y, 1.6), lm.position.z);
+      marker.position.set(lm.position.x, baseY, lm.position.z);
 
-      // Carved stone prasasti stele
-      const steleBase = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.5, 1.2), this.brickMat);
-      steleBase.position.y = 0.25;
-      marker.add(steleBase);
-
-      const steleBody = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.3, 0.45), this.rockMat);
-      steleBody.position.y = 1.5;
-      steleBody.castShadow = true;
-      marker.add(steleBody);
-
-      const goldEmblem = new THREE.Mesh(new THREE.OctahedronGeometry(0.38, 0), this.goldMat);
+      const goldEmblem = new THREE.Mesh(emblemGeo, this.goldMat);
       goldEmblem.position.y = 3.1;
       marker.add(goldEmblem);
 
-      // Glowing ground ring to invite player exploration
-      const ringGeo = new THREE.RingGeometry(1.8, 2.15, 28);
-      ringGeo.rotateX(-Math.PI / 2);
-      const ringMat = new THREE.MeshBasicMaterial({
-        color: '#f9d976',
-        side: THREE.DoubleSide,
-        transparent: true,
-        opacity: 0.65
-      });
       const ring = new THREE.Mesh(ringGeo, ringMat);
       ring.position.y = 0.12;
       marker.add(ring);
 
-      this.beaconRings.push({ ring, emblem: goldEmblem, phase: idx * 1.1 });
-      group.add(marker);
+      this.scene.add(marker);
+      this.beaconRings.push({
+        ring,
+        emblem: goldEmblem,
+        phase: idx * 1.1,
+        x: lm.position.x,
+        z: lm.position.z
+      });
     });
 
-    this.scene.add(group);
+    this.createInstancedGroup(new THREE.BoxGeometry(1.8, 0.5, 1.2), this.brickMat, baseMatrices, false, false);
+    this.createInstancedGroup(new THREE.BoxGeometry(1.2, 2.3, 0.45), this.rockMat, bodyMatrices, !this.isMobile, false);
   }
 
-  // 7. Ambient Fireflies / Golden Dust Particles
+  // 7. Ambient Fireflies / Golden Dust Particles (Animated 100% on GPU Vertex Shader!)
   initAmbientParticles() {
     const count = 260;
     const positions = new Float32Array(count * 3);
@@ -483,37 +632,83 @@ export class VegetationAndNatureSystem {
       opacity: 0.78
     });
 
+    // GPU Vertex Shader floating oscillation (0% CPU cost!)
+    mat.onBeforeCompile = (shader) => {
+      shader.uniforms.uTime = this.vegetationUniforms.uTime;
+      shader.vertexShader = 'uniform float uTime;\n' + shader.vertexShader;
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+        transformed.y += sin(uTime * 1.5 + position.x * 0.45 + position.z * 0.45) * 0.55;`
+      );
+    };
+
     this.particles = new THREE.Points(geo, mat);
     this.scene.add(this.particles);
   }
 
-  update(elapsedTime, torchIntensity = 1.2) {
-    // Animate torch flames
-    for (const f of this.flameMeshes) {
-      const s = 0.88 + Math.sin(elapsedTime * 11 + f.phase) * 0.16;
-      f.mesh.scale.set(s, 0.9 + Math.cos(elapsedTime * 14 + f.phase) * 0.2, s);
+  updateNearestTorches(playerPos) {
+    const px = playerPos.x;
+    const pz = playerPos.z;
+    if ((px - this._lastLightPlayerX) ** 2 + (pz - this._lastLightPlayerZ) ** 2 < 2.25) {
+      return;
+    }
+    this._lastLightPlayerX = px;
+    this._lastLightPlayerZ = pz;
+
+    let d0 = Infinity, d1 = Infinity, d2 = Infinity;
+    let i0 = 0, i1 = 1, i2 = 2;
+
+    for (let i = 0; i < this.torchPositions.length; i++) {
+      const tp = this.torchPositions[i];
+      const dSq = (tp.x - px) ** 2 + (tp.z - pz) ** 2;
+      if (dSq < d0) {
+        d2 = d1; i2 = i1;
+        d1 = d0; i1 = i0;
+        d0 = dSq; i0 = i;
+      } else if (dSq < d1) {
+        d2 = d1; i2 = i1;
+        d1 = dSq; i1 = i;
+      } else if (dSq < d2) {
+        d2 = dSq; i2 = i;
+      }
     }
 
-    // Update torch point light intensities based on time of day
-    for (let i = 0; i < this.torchLights.length; i++) {
+    this._nearestTorchIdx[0] = i0;
+    this._nearestTorchIdx[1] = i1;
+    this._nearestTorchIdx[2] = i2;
+
+    for (let k = 0; k < this.torchLightPool.length; k++) {
+      const tp = this.torchPositions[this._nearestTorchIdx[k]];
+      if (tp) {
+        this.torchLightPool[k].position.set(tp.x, tp.y, tp.z);
+      }
+    }
+  }
+
+  update(elapsedTime, torchIntensity = 1.2, playerPos = null) {
+    // 1. Single uniform update drives ALL 26 torch flames + ALL 260 fireflies on GPU!
+    this.vegetationUniforms.uTime.value = elapsedTime;
+
+    // 2. Pooled dynamic PointLights (only 3 lights, snapped to nearest torches)
+    if (playerPos) {
+      this.updateNearestTorches(playerPos);
+    }
+    for (let i = 0; i < this.torchLightPool.length; i++) {
       const flicker = 0.9 + Math.sin(elapsedTime * 9 + i) * 0.12;
-      this.torchLights[i].intensity = torchIntensity * flicker;
+      this.torchLightPool[i].intensity = torchIntensity * flicker;
     }
 
-    // Pulse landmark prasasti rings & rotating golden emblems
+    // 3. Distance-culled beacon animation (only animate beacons within 65m of player)
     for (const b of this.beaconRings) {
+      if (playerPos) {
+        const dSq = (b.x - playerPos.x) ** 2 + (b.z - playerPos.z) ** 2;
+        if (dSq > 4225) continue;
+      }
       b.emblem.rotation.y = elapsedTime * 1.4 + b.phase;
       b.emblem.position.y = 3.1 + Math.sin(elapsedTime * 2.5 + b.phase) * 0.18;
       const pulse = 1.0 + Math.sin(elapsedTime * 2.2 + b.phase) * 0.1;
       b.ring.scale.set(pulse, pulse, 1);
     }
-
-    // Gentle drift for ambient fireflies / golden dust
-    const pos = this.particles.geometry.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i) + Math.sin(elapsedTime * 1.5 + i) * 0.005;
-      pos.setY(i, y);
-    }
-    pos.needsUpdate = true;
   }
 }

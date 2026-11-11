@@ -21,6 +21,10 @@ class MajapahitWorldApp {
   constructor() {
     this.container = document.getElementById('canvas-container');
     this.clock = new THREE.Clock();
+    this.isMobile =
+      'ontouchstart' in window ||
+      navigator.maxTouchPoints > 0 ||
+      window.innerWidth <= 1024;
 
     this.audio = new AudioSystem();
     this.initRendererAndScene();
@@ -36,14 +40,17 @@ class MajapahitWorldApp {
       60,
       window.innerWidth / window.innerHeight,
       0.5,
-      600
+      this.isMobile ? 380 : 600
     );
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: !this.isMobile || window.devicePixelRatio < 2,
+      powerPreference: 'high-performance'
+    });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMobile ? 1.35 : 2));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = this.isMobile ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.1;
 
@@ -53,18 +60,19 @@ class MajapahitWorldApp {
       this.camera.aspect = window.innerWidth / window.innerHeight;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(window.innerWidth, window.innerHeight);
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMobile ? 1.35 : 2));
     });
   }
 
   initWorldSystems() {
-    // 1. Terrain, River Brantas, Kolam Segaran, Hills, Moat & Bridges
+    // 1. Terrain, River Brantas, Kolam Segaran, Hills, Moat & Bridges (GPU Shader Water + Merged Geometries)
     this.terrain = new TerrainSystem(this.scene);
 
-    // 2. Dynamic Sky Dome, Sun/Moon Shadows, Atmosphere & Time of Day
-    this.sky = new SkyAndLightingSystem(this.scene, this.terrain.waterMaterial);
+    // 2. Dynamic Sky Dome, Sun/Moon Shadows (Adaptive Resolution & Player-Tracking Frustum)
+    this.sky = new SkyAndLightingSystem(this.scene, this.terrain.waterMaterial, this.isMobile);
 
-    // 3. Nusantara Flora (Pohon Maja Agung, Beringin, Kelapa, Lotus, Torches, Prasasti Signposts)
-    this.vegetation = new VegetationAndNatureSystem(this.scene);
+    // 3. Nusantara Flora (InstancedMesh Forest, GPU Fireflies, 3 Pooled PointLights)
+    this.vegetation = new VegetationAndNatureSystem(this.scene, this.isMobile);
 
     // 4. Spatial Grid Optimization O(1) for architectural + procedural tree/torch/rock colliders
     const allColliders = [...SOLID_COLLIDERS, ...(this.vegetation.colliders || [])];
@@ -241,13 +249,26 @@ class MajapahitWorldApp {
     const dt = Math.min(this.clock.getDelta(), 0.05);
     const elapsedTime = this.clock.getElapsedTime();
 
+    this.journalSystem.update(dt);
+
+    // Smart Render Pause: saat Modal penuh/buram terbuka (Jurnal 3D, Kuis, Bantuan),
+    // hentikan beban render dunia utama di latar belakang agar HP dingin & hemat baterai.
+    const modal = gameState.activeModal;
+    const isOpaqueModal =
+      modal === ModalTypes.JOURNAL ||
+      modal === ModalTypes.QUIZ ||
+      modal === ModalTypes.HELP;
+
+    if (isOpaqueModal) {
+      return;
+    }
+
     this.terrain.update(elapsedTime);
-    this.sky.update(dt);
-    this.vegetation.update(elapsedTime, this.sky.state.torchIntensity);
+    this.sky.update(dt, this.explorer.position);
+    this.vegetation.update(elapsedTime, this.sky.state.torchIntensity, this.explorer.position);
     this.architecture.update(elapsedTime);
     this.exploration.update(dt, elapsedTime, this.explorer.position, this.questSystem);
     this.npcSystem.update(dt, elapsedTime, this.explorer.position, this.questSystem);
-    this.journalSystem.update(dt);
     this.explorer.update(dt, elapsedTime);
     this.audio.updateAmbience(this.explorer.position, dt);
     this.hud.update(

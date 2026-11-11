@@ -353,6 +353,14 @@ export class ExplorationSystem {
 
     this.trailPoints = new THREE.Points(geo, mat);
     this.scene.add(this.trailPoints);
+
+    // Pre-allocated lookup cache for 32-segment trail elevation profile (Zero per-frame noise calculation)
+    this._trailSampleCount = 32;
+    this._trailHeightProfile = new Float32Array(this._trailSampleCount + 1);
+    this._lastTrailPlayerX = Infinity;
+    this._lastTrailPlayerZ = Infinity;
+    this._lastTrailTargetX = Infinity;
+    this._lastTrailTargetZ = Infinity;
   }
 
   toggleLenteraWaktu() {
@@ -476,9 +484,12 @@ export class ExplorationSystem {
     // 1. Update Fog of War di sekitar pemain
     this.revealFogCircle(playerPos.x, playerPos.z, 28);
 
-    // 2. Animate Peti Artefak (Floating Orb & Beacons)
+    // 2. Animate Peti Artefak (Floating Orb & Beacons, distance-culled within 70m)
     for (const a of this.artifactMeshes) {
       if (a.collected) continue;
+      const dSq = (a.data.coords.x - playerPos.x) ** 2 + (a.data.coords.z - playerPos.z) ** 2;
+      if (dSq > 4900 && !this.isLanternActive) continue;
+
       a.orb.position.y = 0.95 + Math.sin(elapsedTime * 2.8 + a.phase) * 0.14;
       a.orb.rotation.y = elapsedTime * 1.8 + a.phase;
       const pulse = 1.0 + Math.sin(elapsedTime * 3.0 + a.phase) * 0.12;
@@ -489,15 +500,18 @@ export class ExplorationSystem {
       }
     }
 
-    // 3. Animate Viewpoint Rings
+    // 3. Animate Viewpoint Rings (distance-culled within 75m)
     for (const vp of this.viewpointRings) {
+      const dSq = (vp.data.coords.x - playerPos.x) ** 2 + (vp.data.coords.z - playerPos.z) ** 2;
+      if (dSq > 5625) continue;
+
       vp.emblem.rotation.y = elapsedTime * 1.5 + vp.phase;
       vp.emblem.position.y = 1.35 + Math.sin(elapsedTime * 2.2 + vp.phase) * 0.12;
       const pulse = 1.0 + Math.sin(elapsedTime * 2.5 + vp.phase) * 0.08;
       vp.pulseRing.scale.set(pulse, pulse, 1);
     }
 
-    // 4. Update Trail Partikel Cahaya Pemandu Misi & Lentera Waktu (Quest Breadcrumbs)
+    // 4. Update Trail Partikel Cahaya Pemandu Misi & Lentera Waktu (Zero-Allocation & Cached Elevation)
     let targetX = 0;
     let targetZ = 0;
     let hasTarget = false;
@@ -508,7 +522,6 @@ export class ExplorationSystem {
       if (activeQuest) {
         const canTurnIn = questSystem.canCompleteQuest(activeQuest.id);
         if (canTurnIn) {
-          // Cari NPC pemberi misi untuk serah terima bukti sejarah!
           const npc = NPC_DATA.find((n) => n.id === activeQuest.npcId);
           if (npc) {
             targetX = npc.coords.x;
@@ -517,17 +530,14 @@ export class ExplorationSystem {
             isTurnIn = true;
           }
         } else {
-          // Cari artefak misi aktif yang belum dikoleksi yang paling dekat
-          const reqRelics = activeQuest.requiredRelics.filter(
-            (rId) => !this.collectedArtifacts.includes(rId)
-          );
+          // Cari artefak misi aktif yang belum dikoleksi tanpa alokasi array .filter()
           let closestRelic = null;
           let minD = Infinity;
           for (const a of this.artifactMeshes) {
-            if (a.collected || !reqRelics.includes(a.data.id)) continue;
-            const d = Math.hypot(playerPos.x - a.data.coords.x, playerPos.z - a.data.coords.z);
-            if (d < minD) {
-              minD = d;
+            if (a.collected || !activeQuest.requiredRelics.includes(a.data.id)) continue;
+            const dSq = (playerPos.x - a.data.coords.x) ** 2 + (playerPos.z - a.data.coords.z) ** 2;
+            if (dSq < minD) {
+              minD = dSq;
               closestRelic = a;
             }
           }
@@ -546,9 +556,9 @@ export class ExplorationSystem {
       let minD = Infinity;
       for (const a of this.artifactMeshes) {
         if (a.collected) continue;
-        const d = Math.hypot(playerPos.x - a.data.coords.x, playerPos.z - a.data.coords.z);
-        if (d < minD) {
-          minD = d;
+        const dSq = (playerPos.x - a.data.coords.x) ** 2 + (playerPos.z - a.data.coords.z) ** 2;
+        if (dSq < minD) {
+          minD = dSq;
           closestArt = a;
         }
       }
@@ -560,12 +570,31 @@ export class ExplorationSystem {
     }
 
     if (hasTarget && (this.isLanternActive || (questSystem && questSystem.activeQuestId))) {
-      // Opacity: Terang (0.92) jika Lentera Waktu aktif [F], atau panduan lembut (0.42) saat misi aktif
       this.trailPoints.material.opacity = this.isLanternActive ? 0.92 : 0.42;
+
+      // Recompute 32-point terrain elevation cache ONLY when player or target moves > 1.5m
+      const playerMovedSq = (playerPos.x - this._lastTrailPlayerX) ** 2 + (playerPos.z - this._lastTrailPlayerZ) ** 2;
+      const targetMovedSq = (targetX - this._lastTrailTargetX) ** 2 + (targetZ - this._lastTrailTargetZ) ** 2;
+
+      if (playerMovedSq > 2.25 || targetMovedSq > 2.25) {
+        this._lastTrailPlayerX = playerPos.x;
+        this._lastTrailPlayerZ = playerPos.z;
+        this._lastTrailTargetX = targetX;
+        this._lastTrailTargetZ = targetZ;
+
+        const samples = this._trailSampleCount;
+        for (let s = 0; s <= samples; s++) {
+          const st = s / samples;
+          const sx = THREE.MathUtils.lerp(playerPos.x, targetX, st);
+          const sz = THREE.MathUtils.lerp(playerPos.z, targetZ, st);
+          this._trailHeightProfile[s] = getWalkableHeight(sx, sz);
+        }
+      }
 
       const posAttr = this.trailPoints.geometry.attributes.position;
       const colAttr = this.trailPoints.geometry.attributes.color;
       const count = posAttr.count;
+      const maxIdx = this._trailSampleCount;
 
       const speed = isTurnIn ? 0.65 : 0.45;
       const rColor = isTurnIn ? 0.36 : 1.0;
@@ -576,11 +605,16 @@ export class ExplorationSystem {
         const t = (i / count + (elapsedTime * speed) % 1.0) % 1.0;
         const px = THREE.MathUtils.lerp(playerPos.x, targetX, t);
         const pz = THREE.MathUtils.lerp(playerPos.z, targetZ, t);
-        const py = getWalkableHeight(px, pz) + 0.32 + Math.sin(t * Math.PI) * 0.25;
+
+        // Interpolate terrain height from cached 32-segment lookup profile (0 fbmNoise calls!)
+        const fIdx = t * maxIdx;
+        const idx0 = Math.min(maxIdx - 1, Math.floor(fIdx));
+        const frac = fIdx - idx0;
+        const cachedGroundY = this._trailHeightProfile[idx0] * (1 - frac) + this._trailHeightProfile[idx0 + 1] * frac;
+        const py = cachedGroundY + 0.32 + Math.sin(t * Math.PI) * 0.25;
 
         posAttr.setXYZ(i, px, py, pz);
 
-        // Alpha fade out di dekat kaki pemain dan di dekat target
         const fade = Math.sin(t * Math.PI);
         colAttr.setXYZ(i, rColor * fade, gColor * fade, bColor * fade);
       }

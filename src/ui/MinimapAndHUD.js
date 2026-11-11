@@ -170,6 +170,8 @@ export class MinimapAndHUD {
     this.currentZoneObj = ZONES[0];
     this.currentDialogueNPC = null;
     this._lastCoordsText = '';
+    this._lastMinimapDrawTime = 0;
+    this._lastAtlasDrawTime = 0;
     this.savedPlayerPos = { x: 0, z: 120, y: 2 };
     this.savedPlayerYaw = 0;
 
@@ -1137,12 +1139,20 @@ export class MinimapAndHUD {
       this.interactPrompt.classList.add('hidden');
     }
 
-    // 4. Gambar Ulang Minimap dengan Fog of War & Ikon NPC
-    this.drawMinimap(playerPos, playerYaw);
+    const now = performance.now();
 
-    // 5. Gambar Ulang Atlas Resolusi Tinggi jika Sedang Terbuka
+    // 4. Throttle Minimap Redraw ke ~15 FPS (setiap 65ms) agar CPU bebas hambatan
+    if (now - this._lastMinimapDrawTime >= 65) {
+      this._lastMinimapDrawTime = now;
+      this.drawMinimap(playerPos, playerYaw);
+    }
+
+    // 5. Throttle Atlas Resolusi Tinggi ke ~15 FPS jika sedang terbuka
     if (this.atlasModal && !this.atlasModal.classList.contains('hidden')) {
-      this.drawAtlasMap(playerPos, playerYaw);
+      if (now - this._lastAtlasDrawTime >= 65) {
+        this._lastAtlasDrawTime = now;
+        this.drawAtlasMap(playerPos, playerYaw);
+      }
     }
   }
 

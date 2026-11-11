@@ -76,11 +76,13 @@ export const TIME_PRESETS = {
 };
 
 export class SkyAndLightingSystem {
-  constructor(scene, waterMaterial) {
+  constructor(scene, waterMaterial, isMobile = false) {
     this.scene = scene;
     this.waterMaterial = waterMaterial;
+    this.isMobile = isMobile;
     this.currentPresetKey = 'sunset';
     this.targetPreset = TIME_PRESETS.sunset;
+    this._sunDir = new THREE.Vector3();
 
     // Live interpolated state
     this.state = {
@@ -118,17 +120,24 @@ export class SkyAndLightingSystem {
     this.sunLight = new THREE.DirectionalLight(this.state.sunColor, this.state.sunIntensity);
     this.sunLight.position.copy(this.state.sunPosition);
     this.sunLight.castShadow = true;
-    this.sunLight.shadow.mapSize.width = 2048;
-    this.sunLight.shadow.mapSize.height = 2048;
+
+    // Adaptive shadow resolution: 512x512 on mobile (16x faster), 1024x1024 on desktop
+    const shadowRes = this.isMobile ? 512 : 1024;
+    this.sunLight.shadow.mapSize.width = shadowRes;
+    this.sunLight.shadow.mapSize.height = shadowRes;
     this.sunLight.shadow.camera.near = 10;
-    this.sunLight.shadow.camera.far = 360;
-    const d = 145;
+    this.sunLight.shadow.camera.far = 280;
+
+    // Tight dynamic frustum centered on player (crisper shadows at lighter cost)
+    const d = this.isMobile ? 48 : 72;
     this.sunLight.shadow.camera.left = -d;
     this.sunLight.shadow.camera.right = d;
     this.sunLight.shadow.camera.top = d;
     this.sunLight.shadow.camera.bottom = -d;
-    this.sunLight.shadow.bias = -0.0005;
+    this.sunLight.shadow.bias = -0.0006;
     this.scene.add(this.sunLight);
+    this.scene.add(this.sunLight.target);
+    this._transitionTimer = 0;
   }
 
   initSkyDome() {
@@ -207,6 +216,7 @@ export class SkyAndLightingSystem {
     if (!TIME_PRESETS[presetKey]) return;
     this.currentPresetKey = presetKey;
     this.targetPreset = TIME_PRESETS[presetKey];
+    this._transitionTimer = 2.6;
   }
 
   cyclePreset() {
@@ -216,40 +226,59 @@ export class SkyAndLightingSystem {
     return TIME_PRESETS[keys[nextIdx]];
   }
 
-  update(dt) {
-    const speed = Math.min(1, dt * 2.5);
-    const t = this.targetPreset;
+  update(dt, playerPos = null) {
+    if (this._transitionTimer > 0) {
+      this._transitionTimer = Math.max(0, this._transitionTimer - dt);
+      const speed = Math.min(1, dt * 2.5);
+      const t = this.targetPreset;
 
-    this.state.zenithColor.lerp(t.zenithColor, speed);
-    this.state.horizonColor.lerp(t.horizonColor, speed);
-    this.state.fogColor.lerp(t.fogColor, speed);
-    this.state.fogDensity = THREE.MathUtils.lerp(this.state.fogDensity, t.fogDensity, speed);
-    this.state.sunColor.lerp(t.sunColor, speed);
-    this.state.sunIntensity = THREE.MathUtils.lerp(this.state.sunIntensity, t.sunIntensity, speed);
-    this.state.sunPosition.lerp(t.sunPosition, speed);
-    this.state.hemiSky.lerp(t.hemiSky, speed);
-    this.state.hemiGround.lerp(t.hemiGround, speed);
-    this.state.hemiIntensity = THREE.MathUtils.lerp(this.state.hemiIntensity, t.hemiIntensity, speed);
-    this.state.waterColor.lerp(t.waterColor, speed);
-    this.state.torchIntensity = THREE.MathUtils.lerp(this.state.torchIntensity, t.torchIntensity, speed);
-    this.state.starOpacity = THREE.MathUtils.lerp(this.state.starOpacity, t.starOpacity, speed);
+      this.state.zenithColor.lerp(t.zenithColor, speed);
+      this.state.horizonColor.lerp(t.horizonColor, speed);
+      this.state.fogColor.lerp(t.fogColor, speed);
+      this.state.fogDensity = THREE.MathUtils.lerp(this.state.fogDensity, t.fogDensity, speed);
+      this.state.sunColor.lerp(t.sunColor, speed);
+      this.state.sunIntensity = THREE.MathUtils.lerp(this.state.sunIntensity, t.sunIntensity, speed);
+      this.state.sunPosition.lerp(t.sunPosition, speed);
+      this.state.hemiSky.lerp(t.hemiSky, speed);
+      this.state.hemiGround.lerp(t.hemiGround, speed);
+      this.state.hemiIntensity = THREE.MathUtils.lerp(this.state.hemiIntensity, t.hemiIntensity, speed);
+      this.state.waterColor.lerp(t.waterColor, speed);
+      this.state.torchIntensity = THREE.MathUtils.lerp(this.state.torchIntensity, t.torchIntensity, speed);
+      this.state.starOpacity = THREE.MathUtils.lerp(this.state.starOpacity, t.starOpacity, speed);
 
-    // Apply to lights, fog, sky, stars, and water
-    this.scene.fog.color.copy(this.state.fogColor);
-    this.scene.fog.density = this.state.fogDensity;
+      // Apply to lights, fog, sky, stars, and water
+      this.scene.fog.color.copy(this.state.fogColor);
+      this.scene.fog.density = this.state.fogDensity;
 
-    this.sunLight.color.copy(this.state.sunColor);
-    this.sunLight.intensity = this.state.sunIntensity;
-    this.sunLight.position.copy(this.state.sunPosition);
+      this.sunLight.color.copy(this.state.sunColor);
+      this.sunLight.intensity = this.state.sunIntensity;
 
-    this.hemiLight.color.copy(this.state.hemiSky);
-    this.hemiLight.groundColor.copy(this.state.hemiGround);
-    this.hemiLight.intensity = this.state.hemiIntensity;
+      this.hemiLight.color.copy(this.state.hemiSky);
+      this.hemiLight.groundColor.copy(this.state.hemiGround);
+      this.hemiLight.intensity = this.state.hemiIntensity;
 
-    this.starMat.opacity = this.state.starOpacity;
+      this.starMat.opacity = this.state.starOpacity;
 
-    if (this.waterMaterial) {
-      this.waterMaterial.color.copy(this.state.waterColor);
+      if (this.waterMaterial) {
+        this.waterMaterial.color.copy(this.state.waterColor);
+      }
+    }
+
+    // Center shadow frustum around player (aligned to 2m grid to avoid shadow shimmering)
+    if (playerPos) {
+      const snapX = Math.round(playerPos.x * 0.5) * 2;
+      const snapZ = Math.round(playerPos.z * 0.5) * 2;
+      if (this.sunLight.target.position.x !== snapX || this.sunLight.target.position.z !== snapZ || this._transitionTimer > 0) {
+        this.sunLight.target.position.set(snapX, 0, snapZ);
+        this.sunLight.target.updateMatrixWorld();
+        this.sunLight.position.set(
+          snapX + this.state.sunPosition.x,
+          this.state.sunPosition.y,
+          snapZ + this.state.sunPosition.z
+        );
+      }
+    } else if (this._transitionTimer > 0) {
+      this.sunLight.position.copy(this.state.sunPosition);
     }
   }
 }
