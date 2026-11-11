@@ -177,9 +177,13 @@ export class TouchControls {
   }
 
   handleGlobalTouchStart(e) {
-    // Abaikan sentuhan jika target adalah tombol UI, modal, atau form
+    if (gameState.currentState !== 'EXPLORING') return;
+
+    // Abaikan sentuhan jika target adalah tombol UI, modal, form, atau intro screen
     const target = e.target;
     if (
+      target.closest('.overlay-screen') ||
+      target.closest('#intro-overlay') ||
       target.closest('.hud-top-bar') ||
       target.closest('.unified-header-menu') ||
       target.closest('.minimap-frame') ||
@@ -218,6 +222,8 @@ export class TouchControls {
   }
 
   handleGlobalTouchMove(e) {
+    if (gameState.currentState !== 'EXPLORING') return;
+
     // 1. Perbarui Joystick jika aktif
     if (this.joystickActive && this.joystickTouchId !== null) {
       for (let i = 0; i < e.touches.length; i++) {

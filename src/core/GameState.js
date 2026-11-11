@@ -127,7 +127,7 @@ class GameStateManager {
   }
 
   canPlayerLook() {
-    return !this.isCameraLocked;
+    return this.currentState === GameStates.EXPLORING && !this.isCameraLocked;
   }
 }
 
