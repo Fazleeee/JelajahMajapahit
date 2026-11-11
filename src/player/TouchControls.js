@@ -190,6 +190,7 @@ export class TouchControls {
       target.closest('.quest-complete-toast') ||
       target.closest('.interact-prompt') ||
       target.closest('.minimap-frame') ||
+      target.closest('.hud-bottom-left') ||
       target.closest('.lore-modal') ||
       target.closest('.dialogue-modal') ||
       target.closest('.artifact-modal') ||

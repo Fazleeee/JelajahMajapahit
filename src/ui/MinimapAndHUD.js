@@ -74,6 +74,7 @@ export class MinimapAndHUD {
     this.exploration = explorationSystem;
     this.quests = questSystem;
 
+    this.minimapFrame = document.querySelector('.minimap-frame');
     this.minimapCanvas = document.getElementById('minimap-canvas');
     this.ctx = this.minimapCanvas.getContext('2d');
 
@@ -428,9 +429,17 @@ export class MinimapAndHUD {
       });
     }
 
-    // Klik langsung pada kanvas Minimap juga membuka Atlas Peta Penuh
-    if (this.minimapCanvas) {
-      this.minimapCanvas.addEventListener('click', () => gameState.toggleModal(ModalTypes.ATLAS));
+    // Klik di mana saja pada bingkai Minimap (kanvas, judul, maupun tombol) membuka Peta (Maks. 1/2 Layar)
+    if (this.minimapFrame) {
+      this.minimapFrame.addEventListener('click', (e) => {
+        e.stopPropagation();
+        gameState.toggleModal(ModalTypes.ATLAS);
+      });
+    } else if (this.minimapCanvas) {
+      this.minimapCanvas.addEventListener('click', (e) => {
+        e.stopPropagation();
+        gameState.toggleModal(ModalTypes.ATLAS);
+      });
     }
 
     // Klik di luar popover menutup popover
@@ -448,11 +457,11 @@ export class MinimapAndHUD {
     });
 
     // Atlas Modal Events
-    if (this.btnMapExpand) {
-      this.btnMapExpand.addEventListener('click', () => gameState.toggleModal(ModalTypes.ATLAS));
-    }
     if (this.btnAtlasClose) {
-      this.btnAtlasClose.addEventListener('click', () => gameState.closeModal(ModalTypes.ATLAS));
+      this.btnAtlasClose.addEventListener('click', (e) => {
+        e.stopPropagation();
+        gameState.closeModal(ModalTypes.ATLAS);
+      });
     }
     if (this.atlasModal) {
       this.atlasModal.addEventListener('click', (e) => {
@@ -571,7 +580,7 @@ export class MinimapAndHUD {
     // Check Landmarks
     for (const lm of LANDMARKS) {
       const dist = Math.hypot(wx - lm.position.x, wz - lm.position.z);
-      if (dist < 14) {
+      if (dist < 18) {
         if (this.atlasCurrentZone) this.atlasCurrentZone.textContent = lm.title;
         if (this.atlasCurrentDesc) this.atlasCurrentDesc.textContent = lm.text;
         this.atlasCanvas.style.cursor = 'pointer';
@@ -584,7 +593,7 @@ export class MinimapAndHUD {
       // Check NPCs
       for (const npc of NPC_DATA) {
         const dist = Math.hypot(wx - npc.coords.x, wz - npc.coords.z);
-        if (dist < 14) {
+        if (dist < 18) {
           if (this.atlasCurrentZone) this.atlasCurrentZone.textContent = `${npc.icon} ${npc.name} (${npc.title})`;
           if (this.atlasCurrentDesc) this.atlasCurrentDesc.textContent = `Tokoh Sejarah di ${npc.zone}: "${npc.greeting}"`;
           this.atlasCanvas.style.cursor = 'pointer';
@@ -598,7 +607,7 @@ export class MinimapAndHUD {
       // Check Viewpoints
       for (const vp of VIEWPOINTS) {
         const dist = Math.hypot(wx - vp.coords.x, wz - vp.coords.z);
-        if (dist < 14) {
+        if (dist < 18) {
           if (this.atlasCurrentZone) this.atlasCurrentZone.textContent = `🦅 ${vp.name}`;
           if (this.atlasCurrentDesc) this.atlasCurrentDesc.textContent = `Titik Sinkronisasi Menara Pandang (${vp.zoneTitle}).`;
           this.atlasCanvas.style.cursor = 'pointer';
@@ -620,21 +629,31 @@ export class MinimapAndHUD {
     const wx = (cx - w * 0.5) / scale;
     const wz = (cy - h * 0.5) / scale;
 
+    // Klik NPC membuka Dialog Sejarah
+    for (const npc of NPC_DATA) {
+      const dist = Math.hypot(wx - npc.coords.x, wz - npc.coords.z);
+      if (dist < 18) {
+        this.closeAtlas();
+        this.showDialogue(npc);
+        return;
+      }
+    }
+
     // Klik landmark membuka Kropak Lontar
     for (const lm of LANDMARKS) {
       const dist = Math.hypot(wx - lm.position.x, wz - lm.position.z);
-      if (dist < 14) {
+      if (dist < 18) {
         this.showLoreModal(lm.title, lm.text);
         return;
       }
     }
 
-    // Klik NPC membuka Dialog Sejarah
-    for (const npc of NPC_DATA) {
-      const dist = Math.hypot(wx - npc.coords.x, wz - npc.coords.z);
-      if (dist < 14) {
-        this.closeAtlas();
-        this.showDialogue(npc);
+    // Klik Viewpoint menampilkan info di sidebar Peta
+    for (const vp of VIEWPOINTS) {
+      const dist = Math.hypot(wx - vp.coords.x, wz - vp.coords.z);
+      if (dist < 18) {
+        if (this.atlasCurrentZone) this.atlasCurrentZone.textContent = `🦅 ${vp.name}`;
+        if (this.atlasCurrentDesc) this.atlasCurrentDesc.textContent = `Menara Pandang di ${vp.zoneTitle}. Kunjungi puncak menara ini dan tekan E / Interaksi untuk membuka peta!`;
         return;
       }
     }
