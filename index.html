@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Ekspedisi Majapahit 1350 M — Petualangan Sejarah 3D</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- Orientation Blocker (Wajib Landscape untuk Pengalaman Terbaik) -->
+  <div id="orientation-blocker" class="orientation-blocker">
+    <div class="orientation-content">
+      <div class="orientation-phone-animation">
+        <div class="phone-device">
+          <div class="phone-screen">
+            <span class="phone-majapahit-sun">☀️</span>
+          </div>
+        </div>
+        <div class="rotate-arrow">↻</div>
+      </div>
+      <div class="orientation-tag">PENGALAMAN 3D EKSPEDISI MAJAPAHIT</div>
+      <h2 class="orientation-title">MOHON MIRINGKAN PONSEL ANDA</h2>
+      <p class="orientation-subtitle">PUTAR KE MODE LANDSCAPE (MENDATAR)</p>
+      <p class="orientation-desc">
+        Game ini didesain khusus dalam mode <strong>Landscape</strong> untuk menyajikan visual megah Trowulan 1350 M dan kontrol analog ala Roblox di layar sentuh ponsel Anda.
+      </p>
+      <div class="orientation-status">
+        <span class="status-dot"></span> Menunggu rotasi layar landscape...
+      </div>
+      <button id="btn-force-landscape" class="btn-primary btn-rotate-request">
+        <span>🔄 Kunci Mode Landscape & Layar Penuh</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 3D Canvas Container -->
+  <div id="canvas-container"></div>
+
+  <!-- Intro / Start Screen Modal -->
+  <div id="intro-overlay" class="overlay-screen">
+    <div class="intro-card">
+      <div class="badge-era">MATERI SEJARAH SMP KELAS VII • KURIKULUM MERDEKA</div>
+      <h1 class="game-title">EKSPEDISI MAJAPAHIT</h1>
+      <h2 class="game-subtitle">Jejak Sang Mahapatih • Trowulan 1350 M</h2>
+      <p class="intro-desc">
+        Selamat datang, <strong>Penjelajah Waktu</strong>! Kamu telah terlempar ke abad ke-14, tepat di masa keemasan Kerajaan Majapahit di bawah kepemimpinan <strong>Raja Hayam Wuruk</strong> dan <strong>Mahapatih Gajah Mada</strong>. Jelajahi bentang alam Hutan Tarik, Sungai Brantas, Kolam Segaran, hingga perbukitan Candi untuk mengungkap sejarah Nusantara!
+      </p>
+
+      <div class="zones-preview">
+        <div class="intro-zone-tag"><span>🌿</span> 1. Hutan Tarik & Sungai Brantas</div>
+        <div class="intro-zone-tag"><span>🏺</span> 2. Pasar Kotaraja & Kolam Segaran</div>
+        <div class="intro-zone-tag"><span>🛕</span> 3. Lembah Candi & Sanggar Pujangga</div>
+        <div class="intro-zone-tag"><span>⛵</span> 4. Barak Bhayangkara & Dermaga Jung</div>
+        <div class="intro-zone-tag"><span>👑</span> 5. Kedaton Agung Istana Majapahit</div>
+      </div>
+
+      <div class="controls-grid">
+        <div class="ctrl-item"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> <span>Bergerak / Menjelajah</span></div>
+        <div class="ctrl-item"><kbd>Shift</kbd> <span>Lari Cepat (Sprint)</span></div>
+        <div class="ctrl-item"><kbd>Space</kbd> <span>Melompat</span></div>
+        <div class="ctrl-item"><kbd>Mouse</kbd> <span>Putar Kamera 360°</span></div>
+        <div class="ctrl-item"><kbd>T</kbd> <span>Ubah Waktu (Pagi/Siang/Sore/Malam)</span></div>
+        <div class="ctrl-item"><kbd>V</kbd> <span>Mode Kamera Elang (Overview Peta)</span></div>
+      </div>
+
+      <button id="btn-start-game" class="btn-primary">
+        <span>Mulai Eksplorasi Dunia 3D</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- HUD Overlay (Active during gameplay) - Minimalist, Clear & Cinematic -->
+  <div id="hud-overlay" class="hud-hidden">
+    <!-- Top Bar Navigation (Sleek, Unobtrusive & Minimalist) -->
+    <header class="hud-top-bar">
+      <!-- Kiri: Pill Misi Aktif (Hanya Judul, Klik untuk Rincian) -->
+      <div class="hud-top-left-group">
+        <button id="quest-pill" class="quest-pill" title="Klik untuk rincian tugas sejarah">
+          <span class="quest-pill-icon">📜</span>
+          <span id="quest-tracker-title" class="quest-pill-title">Misi 1: Aroma Rempah & Koin Gobog</span>
+          <span id="quest-pill-badge" class="quest-pill-badge">0/2</span>
+          <span class="quest-pill-arrow">▾</span>
+        </button>
+
+        <!-- Popover Rincian Misi (Muncul hanya saat quest-pill diklik) -->
+        <div id="quest-detail-popover" class="quest-detail-popover hidden">
+          <div class="quest-popover-header">
+            <span class="quest-popover-badge">TITAH SEJARAH MAJAPAHIT</span>
+            <button id="btn-quest-close" class="btn-quest-close" title="Tutup Rincian">✕</button>
+          </div>
+          <div id="quest-tracker-task" class="quest-popover-task">Temukan Koin Gobog & Celengan Terakota</div>
+          <div id="quest-tracker-progress" class="quest-popover-progress">Progres: 0/2 ditemukan</div>
+        </div>
+      </div>
+
+      <!-- Tengah: Pill Nama Wilayah (Simpel, Tanpa Kompas Ribet, Klik untuk Penjelasan) -->
+      <div class="hud-top-center-group">
+        <button id="zone-pill" class="zone-pill" title="Klik untuk membaca sejarah wilayah ini">
+          <span class="zone-pill-icon">📍</span>
+          <span id="zone-name" class="zone-pill-title">Hutan Tarik</span>
+          <span class="zone-pill-info">ⓘ</span>
+        </button>
+      </div>
+
+      <!-- Kanan: Tombol Menu Utama (Membuka Header Terpadu) -->
+      <div class="hud-top-right-group">
+        <button id="btn-toggle-menu" class="btn-menu-pill" title="Buka Pengaturan Waktu, Audio & Fitur">
+          <span class="menu-pill-icon">☰</span>
+          <span class="menu-pill-label">Menu</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Header Terpadu (Unified Slide-Down Header Menu) -->
+    <div id="unified-header-menu" class="unified-header-menu hidden">
+      <div class="header-menu-container">
+        <div class="header-menu-topbar">
+          <div class="header-menu-title">
+            <span>☀️</span> EKSPEDISI MAJAPAHIT 1350 M • KOTARAJA TROWULAN
+          </div>
+          <div class="header-player-rank">
+            <span class="rank-label">Status:</span>
+            <strong id="player-rank-title">Pengelana Hutan Tarik</strong>
+            <span id="profile-relic-count" class="rank-relics">🏺 0/10 Artefak</span>
+          </div>
+          <button id="btn-close-menu" class="btn-close-menu" title="Tutup Menu">✕</button>
+        </div>
+
+        <div class="header-menu-grid">
+          <!-- Kolom 1: Suasana Waktu, Kamera & Audio -->
+          <div class="header-card">
+            <div class="header-card-label">SUASANA WAKTU, KAMERA & AUDIO</div>
+            <div class="header-time-controls">
+              <div class="header-time-info">
+                <span id="time-icon">🌅</span>
+                <span id="time-label">Sore Keemasan (16:30)</span>
+              </div>
+              <div class="time-buttons-row">
+                <button class="btn-time" data-preset="morning" title="Pagi Cerah">🌅 Pagi</button>
+                <button class="btn-time" data-preset="noon" title="Siang Terik">☀️ Siang</button>
+                <button class="btn-time active" data-preset="sunset" title="Sore Keemasan">🌇 Sore</button>
+                <button class="btn-time" data-preset="night" title="Malam Obor">🌙 Malam</button>
+              </div>
+              <div class="header-audio-row">
+                <button id="btn-toggle-audio" class="btn-header-action" title="Matikan/Nyalakan Suara">
+                  <span id="audio-icon">🔊</span> Musik Gamelan
+                </button>
+                <button id="btn-toggle-cam" class="btn-header-action" title="Ganti Mode Kamera">
+                  <span id="cam-icon">🦅</span> Kamera Elang (V)
+                </button>
+              </div>
+              <div class="header-slider-row">
+                <label for="cam-sensitivity-slider" class="slider-label">
+                  <span>🎯 Kecepatan Putar Kamera:</span>
+                  <strong id="cam-sensitivity-val">100%</strong>
+                </label>
+                <input type="range" id="cam-sensitivity-slider" class="cam-slider" min="30" max="180" value="100" step="10" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Kolom 2: Fitur & Tindakan Cepat -->
+          <div class="header-card">
+            <div class="header-card-label">FITUR & MENU PENJELAJAHAN</div>
+            <div class="header-actions-grid">
+              <button id="menu-btn-map" class="header-action-btn" title="Buka Atlas Besar Trowulan (Tekan M)">
+                <span class="btn-ico">🗺️</span>
+                <span class="btn-txt">Atlas Peta (M)</span>
+              </button>
+              <button id="menu-btn-journal" class="header-action-btn" title="Buka Ensiklopedia & 3D Viewer (Tekan J)">
+                <span class="btn-ico">📜</span>
+                <span class="btn-txt">Jurnal (J)</span>
+              </button>
+              <button id="menu-btn-lantern" class="header-action-btn" title="Nyalakan Pilar Lentera Waktu (Tekan F)">
+                <span class="btn-ico">🏮</span>
+                <span class="btn-txt">Lentera (F)</span>
+              </button>
+              <button id="menu-btn-quiz" class="header-action-btn" title="Buka Ujian Kuis Gerbang Palapa (Tekan K)">
+                <span class="btn-ico">⚔️</span>
+                <span class="btn-txt">Ujian Kuis (K)</span>
+              </button>
+              <button id="menu-btn-help" class="header-action-btn" title="Buka Panduan Kontrol (Tekan H)">
+                <span class="btn-ico">❓</span>
+                <span class="btn-txt">Bantuan (H)</span>
+              </button>
+              <button id="menu-btn-fullscreen" class="header-action-btn" title="Mode Layar Penuh">
+                <span class="btn-ico">⛶</span>
+                <span class="btn-txt">Layar Penuh</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quest Completion Reward Toast -->
+    <div id="quest-complete-toast" class="quest-complete-toast hidden">
+      <div class="qtoast-icon">🏆</div>
+      <div class="qtoast-body">
+        <div id="qtoast-title" class="qtoast-title">MISI SELESAI!</div>
+        <div id="qtoast-lore" class="qtoast-lore">Pengetahuan sejarah baru telah tercatat.</div>
+      </div>
+      <button id="btn-qtoast-close" class="btn-qtoast-close" title="Tutup">✕</button>
+    </div>
+
+    <!-- Viewpoint Panoramic Banner -->
+    <div id="viewpoint-banner" class="viewpoint-banner hidden">
+      <div class="vp-eagle">🦅</div>
+      <div id="vp-banner-title" class="vp-title">SINKRONISASI MENARA PANDANG</div>
+      <div id="vp-banner-zone" class="vp-zone">LEMBAH CANDI & SANGGAR PUJANGGA</div>
+    </div>
+
+    <!-- Artifact Discovery Modal -->
+    <div id="artifact-modal" class="artifact-modal hidden">
+      <div class="artifact-card">
+        <div class="art-glow">✨</div>
+        <div class="art-badge">PENEMUAN ARTEFAK SEJARAH MAJAPAHIT</div>
+        <h2 id="art-modal-title" class="art-title">Nama Artefak</h2>
+        <div class="art-meta">
+          <span id="art-modal-era" class="art-era">Abad ke-14 M</span>
+          <span id="art-modal-zone" class="art-zone">Lokasi</span>
+        </div>
+        <div class="art-lore-box">
+          <p id="art-modal-lore" class="art-lore"></p>
+        </div>
+        <button id="btn-art-close" class="btn-primary art-btn">
+          <span>Simpan ke Jurnal & Lanjutkan (E / Esc)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- RPG Dialogue Modal with Historical Figures -->
+    <div id="dialogue-modal" class="dialogue-modal hidden">
+      <div class="dialogue-card">
+        <div class="dialogue-header">
+          <div class="speaker-avatar">
+            <span id="speaker-icon">⚔️</span>
+          </div>
+          <div class="speaker-info">
+            <div id="speaker-faction" class="speaker-faction">👑 KELUARGA KERATON</div>
+            <h3 id="speaker-name" class="speaker-name">Mahapatih Gajah Mada</h3>
+            <div id="speaker-title" class="speaker-title">Panglima Tertinggi Bhayangkara</div>
+          </div>
+          <button id="btn-dialogue-close" class="btn-dialogue-close" title="Tutup Dialog (E / Esc)">✕</button>
+        </div>
+        <div class="dialogue-body">
+          <p id="dialogue-text" class="dialogue-text"></p>
+        </div>
+        <div id="dialogue-choices" class="dialogue-choices"></div>
+      </div>
+    </div>
+
+    <!-- Interactive Prompt [E] -->
+    <div id="interact-prompt" class="interact-prompt hidden">
+      <div class="key-badge"><kbd>E</kbd></div>
+      <div class="prompt-text">
+        <span class="prompt-action">Periksa & Pelajari</span>
+        <strong id="interact-target-name">Prasasti Sejarah</strong>
+      </div>
+    </div>
+
+    <!-- Lore Modal (Kropak Lontar Sejarah Majapahit) -->
+    <div id="lore-modal" class="lore-modal hidden">
+      <div class="lore-content">
+        <div class="lore-header">
+          <div class="lore-tag">📜 KROPAK LONTAR SEJARAH MAJAPAHIT</div>
+          <button id="btn-lore-close" class="btn-lore-close">✕</button>
+        </div>
+        <div class="kawi-script-header">ꦎꦀ ꦄꦮꦶꦒ꧀ꦤꦩ꧀ ꦄꦱ꧀ꦠꦸ • OM AWIGNAM ASTU</div>
+        <h2 id="lore-modal-title" class="lore-title">Pohon Maja di Hutan Tarik</h2>
+        <div class="lore-scroll-frame">
+          <div id="lore-source-box" class="lontar-source-box">
+            "Hana ta sira rāden wijaya... amukti palapa ri sakatêmbê ning nusa."
+          </div>
+          <div class="lontar-edu-box">
+            <p id="lore-modal-body" class="lore-body"></p>
+          </div>
+        </div>
+        <div class="lore-footer">
+          <span>Tekan <kbd>E</kbd> atau <kbd>ESC</kbd> untuk kembali menjelajah</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Digital Codex / Jurnal Sejarah Majapahit Modal with 3D Relic Viewer -->
+    <div id="journal-modal" class="journal-modal hidden">
+      <div class="journal-card">
+        <div class="journal-header">
+          <div class="journal-tag">📜 ENSIKLOPEDIA & JURNAL SEJARAH MAJAPAHIT</div>
+          <button id="btn-journal-close" class="btn-journal-close">✕</button>
+        </div>
+        <div class="journal-nav-tabs">
+          <button class="journal-tab-btn active" data-tab="relics">🏺 Koleksi Artefak 3D</button>
+          <button class="journal-tab-btn" data-tab="bios">👑 Tokoh-Tokoh Sejarah</button>
+          <button class="journal-tab-btn" data-tab="timeline">⏳ Garis Waktu Majapahit</button>
+        </div>
+
+        <!-- Tab 1: Koleksi Artefak 3D -->
+        <div id="tab-relics" class="journal-tab-panel active">
+          <div class="relic-viewer-layout">
+            <div class="relic-3d-pane">
+              <div class="viewer-3d-frame">
+                <canvas id="relic-viewer-canvas" width="260" height="260"></canvas>
+                <div class="canvas-3d-hint">💡 Klik & Geser Mouse untuk Memutar 3D 360°</div>
+              </div>
+              <div class="relic-detail-card">
+                <h3 id="relic-detail-title" class="relic-title">Buah Maja Bersejarah</h3>
+                <div class="relic-meta-tags">
+                  <span id="relic-detail-era" class="relic-badge-tag">Era: 1293 M</span>
+                  <span id="relic-detail-zone" class="relic-badge-tag">Hutan Tarik</span>
+                </div>
+                <p id="relic-detail-desc" class="relic-desc"></p>
+              </div>
+            </div>
+            <div class="relic-selector-pane">
+              <div class="pane-subtitle">DAFTAR 10 ARTEFAK SEJARAH</div>
+              <div id="relic-grid-list" class="relic-grid-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Tokoh Sejarah -->
+        <div id="tab-bios" class="journal-tab-panel">
+          <div id="biography-list" class="biography-grid"></div>
+        </div>
+
+        <!-- Tab 3: Garis Waktu -->
+        <div id="tab-timeline" class="journal-tab-panel">
+          <div id="timeline-list" class="timeline-container"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive Evaluation Quiz Modal -->
+    <div id="quiz-modal" class="quiz-modal hidden">
+      <div class="quiz-container">
+        <!-- Question Screen -->
+        <div id="quiz-card-view" class="quiz-card-view">
+          <div class="quiz-header">
+            <div>
+              <div id="quiz-question-num" class="quiz-badge">SOAL 1 DARI 5</div>
+              <div id="quiz-topic" class="quiz-topic">Materi: Asal-Usul & Pendiri</div>
+            </div>
+            <button id="btn-quiz-close" class="btn-quiz-close">✕</button>
+          </div>
+          <h3 id="quiz-text" class="quiz-question-text">Pertanyaan Kuis</h3>
+          <div id="quiz-options-list" class="quiz-options-list"></div>
+
+          <div id="quiz-feedback-box" class="quiz-feedback-box hidden">
+            <p id="quiz-feedback-text"></p>
+          </div>
+
+          <button id="btn-quiz-next" class="btn-primary btn-quiz-next hidden">
+            <span>Lanjut ke Soal Berikutnya →</span>
+          </button>
+        </div>
+
+        <!-- Certificate Screen -->
+        <div id="quiz-certificate-view" class="quiz-certificate-view hidden">
+          <div class="cert-card">
+            <div class="cert-crest">☀️</div>
+            <div class="cert-subtitle">KERAJAAN MAJAPAHIT • WILWATIKTA 1350 M</div>
+            <h2 class="cert-title">PIAGAM PENJELAJAH WAKTU NUSANTARA</h2>
+            <p class="cert-salute">Dengan ini menganugerahkan gelar kehormatan kepada:</p>
+            <div id="cert-student-name" class="cert-student-name">Penjelajah Waktu</div>
+            <div class="cert-honor">Telah menyelesaikan Ujian Evaluasi Sejarah dengan Gelar:</div>
+            <div id="cert-title" class="cert-rank">Mahapatih Utama Sejarah Nusantara</div>
+            <div class="cert-score-wrap">
+              <span>Nilai Akhir:</span>
+              <strong id="cert-score">100/100</strong>
+            </div>
+
+            <div class="cert-input-row">
+              <input type="text" id="input-student-name" placeholder="Ketik Nama Lengkap Siswa..." class="cert-input" />
+              <button id="btn-cert-update" class="btn-cert-action">Perbarui Nama</button>
+            </div>
+
+            <div class="cert-buttons">
+              <button id="btn-quiz-restart" class="btn-primary">
+                <span>Ulangi Ujian Kuis</span>
+              </button>
+              <button id="btn-cert-close" class="btn-secondary">
+                <span>Tutup & Kembali Menjelajah</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Left Minimap & Coordinates -->
+    <div class="hud-bottom-left">
+      <div class="minimap-frame">
+        <canvas id="minimap-canvas" width="180" height="180"></canvas>
+        <div class="minimap-header-row">
+          <div class="minimap-title">TROWULAN 1350 M</div>
+          <button id="btn-map-expand" class="btn-map-expand" title="Buka Peta Penuh (M)">Peta (M)</button>
+        </div>
+      </div>
+      <div id="coords-display" class="coords-display">X: 0 | Z: 120 | Elevasi: 2.1m</div>
+    </div>
+
+
+
+    <!-- Fullscreen Interactive Atlas Modal (M) -->
+    <div id="atlas-modal" class="atlas-modal hidden">
+      <div class="atlas-card">
+        <div class="atlas-header">
+          <div class="atlas-tag">
+            <span>☀️</span> ATLAS BESAR KOTARAJA TROWULAN • WILWATIKTA 1350 M
+          </div>
+          <button id="btn-atlas-close" class="btn-atlas-close">✕</button>
+        </div>
+        <div class="atlas-layout">
+          <div class="atlas-map-view">
+            <canvas id="atlas-canvas" width="620" height="620"></canvas>
+          </div>
+          <div class="atlas-sidebar">
+            <div class="atlas-legend-card">
+              <div class="legend-title">LEGENDA SITUS SEJARAH</div>
+              <div class="legend-grid">
+                <div class="legend-item"><span class="legend-dot" style="background: #257d8f;"></span> Sungai & Kanal</div>
+                <div class="legend-item"><span class="legend-dot" style="background: #a83e2b;"></span> Kolam Segaran</div>
+                <div class="legend-item"><span class="legend-dot" style="background: #b86843;"></span> Jalan Kerajaan</div>
+                <div class="legend-item"><span class="legend-dot" style="background: #f9d976;"></span> Titik Prasasti</div>
+                <div class="legend-item"><span class="legend-dot" style="background: #2ecc71;"></span> Tokoh NPC</div>
+                <div class="legend-item"><span class="legend-dot" style="background: #ffd700;"></span> Menara Pandang</div>
+                <div class="legend-item"><span class="legend-dot" style="background: #ffb300;"></span> Peti Artefak</div>
+                <div class="legend-item"><span class="legend-dot" style="background: #e74c3c;"></span> Kedaton Agung</div>
+              </div>
+            </div>
+            <div class="atlas-zone-info">
+              <div class="legend-title">LOKASI PENJELAJAH SAAT INI</div>
+              <h3 id="atlas-current-zone" class="atlas-zone-title">Hutan Tarik</h3>
+              <p id="atlas-current-desc" class="atlas-zone-desc">Latar awal berdirinya wangsa Rajasa di tepi Sungai Brantas.</p>
+            </div>
+            <div class="atlas-zone-info">
+              <div class="legend-title">PETUNJUK EKSPLORASI</div>
+              <p class="atlas-zone-desc">Nyalakan <strong>Lentera Waktu (F)</strong> untuk memancarkan pilar cahaya ke langit yang membimbingmu ke artefak terdekat!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Control & Keybindings Helper Modal (H) -->
+    <div id="help-modal" class="help-modal hidden">
+      <div class="help-card">
+        <div class="help-header">
+          <div class="help-title"><span>🧭</span> PANDUAN KONTROL & PETUALANGAN</div>
+          <button id="btn-help-close" class="btn-help-close">✕</button>
+        </div>
+        <div class="help-grid-cards">
+          <div class="help-card-item">
+            <div class="help-keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div>
+            <div class="help-action-desc">Bergerak menjelajah alam</div>
+          </div>
+          <div class="help-card-item">
+            <div class="help-keys"><kbd>Shift</kbd></div>
+            <div class="help-action-desc">Lari Cepat (Sprint)</div>
+          </div>
+          <div class="help-card-item">
+            <div class="help-keys"><kbd>Space</kbd></div>
+            <div class="help-action-desc">Melompat / Berenang</div>
+          </div>
+          <div class="help-card-item">
+            <div class="help-keys"><kbd>Mouse</kbd></div>
+            <div class="help-action-desc">Klik & Geser: Putar Kamera 360°</div>
+          </div>
+          <div class="help-card-item">
+            <div class="help-keys"><kbd>E</kbd></div>
+            <div class="help-action-desc">Interaksi & Buka/Tutup (Prasasti / NPC / Peti)</div>
+          </div>
+          <div class="help-card-item">
+            <div class="help-keys"><kbd>M</kbd></div>
+            <div class="help-action-desc">Buka Atlas Peta Penuh Trowulan</div>
+          </div>
+          <div class="help-card-item">
+            <div class="help-keys"><kbd>J</kbd></div>
+            <div class="help-action-desc">Buka Jurnal Sejarah & Artefak 3D</div>
+          </div>
+          <div class="help-card-item">
+            <div class="help-keys"><kbd>F</kbd></div>
+            <div class="help-action-desc">Lentera Waktu (Detektor Artefak)</div>
+          </div>
+          <div class="help-card-item">
+            <div class="help-keys"><kbd>V</kbd></div>
+            <div class="help-action-desc">Mode Kamera Elang (Overview Luas)</div>
+          </div>
+          <div class="help-card-item">
+            <div class="help-keys"><kbd>T</kbd></div>
+            <div class="help-action-desc">Ubah Suasana Waktu (Pagi/Siang/Sore/Malam)</div>
+          </div>
+          <div class="help-card-item">
+            <div class="help-keys"><kbd>K</kbd></div>
+            <div class="help-action-desc">Buka Ujian Kuis Evaluasi Sejarah</div>
+          </div>
+          <div class="help-card-item">
+            <div class="help-keys"><kbd>Esc</kbd> / <kbd>E</kbd></div>
+            <div class="help-action-desc">Tutup Modal / Dialog / Jendela Aktif</div>
+          </div>
+          <div class="help-card-item">
+            <div class="help-keys"><kbd>Scroll</kbd></div>
+            <div class="help-action-desc">Zoom Jarak Kamera (Dekat/Jauh)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Roblox Mobile Controls Layer (Virtual Joystick & Action Buttons) -->
+    <div id="mobile-controls" class="mobile-controls">
+      <!-- Virtual Joystick Zone (Left thumb) -->
+      <div id="joystick-zone" class="joystick-zone">
+        <div id="joystick-base" class="joystick-base">
+          <div id="joystick-knob" class="joystick-knob">
+            <div class="knob-center-dot"></div>
+          </div>
+          <div class="joystick-ring-glow"></div>
+          <div class="joystick-axis-h"></div>
+          <div class="joystick-axis-v"></div>
+        </div>
+      </div>
+
+      <!-- Mobile Action Buttons Cluster (Right thumb) -->
+      <div class="mobile-actions-cluster">
+        <!-- Dynamic Contextual Interact Button (Roblox Action E) -->
+        <button id="btn-mobile-interact" class="btn-mobile-action btn-mobile-interact hidden" aria-label="Interaksi">
+          <span class="btn-mobile-icon">✨</span>
+          <span id="btn-mobile-interact-label" class="btn-mobile-label">E</span>
+        </button>
+
+        <!-- Sprint Toggle Button -->
+        <button id="btn-mobile-sprint" class="btn-mobile-action btn-mobile-sprint" aria-label="Lari Cepat">
+          <span class="btn-mobile-icon">⚡</span>
+          <span class="btn-mobile-sub">Lari</span>
+        </button>
+
+        <!-- Jump Button (Roblox Jump Style) -->
+        <button id="btn-mobile-jump" class="btn-mobile-action btn-mobile-jump" aria-label="Melompat">
+          <span class="btn-mobile-icon">🦘</span>
+          <span class="btn-mobile-sub">Lompat</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "ekspedisi-majapahit-3d",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "start": "node server.mjs"
+  }
+}
