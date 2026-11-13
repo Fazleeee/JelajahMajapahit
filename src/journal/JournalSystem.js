@@ -122,11 +122,16 @@ export class JournalSystem {
     this.viewerCamera.position.set(0, 1.2, 4.5);
     this.viewerCamera.lookAt(0, 0, 0);
 
-    this.viewerRenderer = new THREE.WebGLRenderer({
-      canvas: this.viewerCanvas,
-      alpha: true,
-      antialias: true
-    });
+    try {
+      this.viewerRenderer = new THREE.WebGLRenderer({
+        canvas: this.viewerCanvas,
+        alpha: true,
+        antialias: true
+      });
+    } catch {
+      this.viewerRenderer = null;
+      return;
+    }
     this.viewerRenderer.setSize(260, 260);
     this.viewerRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
@@ -162,18 +167,21 @@ export class JournalSystem {
       silhouette: new THREE.MeshStandardMaterial({ color: '#2d241e', roughness: 0.9 })
     };
 
-    // Mouse drag rotation on 3D relic canvas
-    this.viewerCanvas.addEventListener('mousedown', (e) => {
+    // Pointer drag rotation on 3D relic canvas (mendukung mouse & sentuhan mobile)
+    this.viewerCanvas.style.touchAction = 'none';
+    this.viewerCanvas.addEventListener('pointerdown', (e) => {
       this.isDragging = true;
       this.prevMouse.x = e.clientX;
       this.prevMouse.y = e.clientY;
     });
 
-    window.addEventListener('mouseup', () => {
+    const stopDrag = () => {
       this.isDragging = false;
-    });
+    };
+    window.addEventListener('pointerup', stopDrag);
+    window.addEventListener('pointercancel', stopDrag);
 
-    window.addEventListener('mousemove', (e) => {
+    window.addEventListener('pointermove', (e) => {
       if (!this.isDragging || !this.relicObjectGroup) return;
       const dx = e.clientX - this.prevMouse.x;
       const dy = e.clientY - this.prevMouse.y;

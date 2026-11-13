@@ -336,19 +336,24 @@ export class TouchControls {
     this.joystickVector.y = -normY * magnitude; // Y ke atas adalah nilai positif (maju)
     this.joystickVector.magnitude = magnitude;
 
-    // Auto-sprint jika joystick didorong penuh (> 85% radius)
-    if (magnitude > 0.88) {
-      this.isSprintActive = true;
-      if (this.btnSprint) this.btnSprint.classList.add('active');
+    // Auto-sprint jika joystick didorong penuh (> 88% radius)
+    this.isAutoSprinting = magnitude > 0.88;
+    if (this.btnSprint) {
+      this.btnSprint.classList.toggle('active', this.isSprintActive || this.isAutoSprinting);
     }
   }
 
   resetJoystick() {
     this.joystickActive = false;
     this.joystickTouchId = null;
+    this.isAutoSprinting = false;
     this.joystickVector.x = 0;
     this.joystickVector.y = 0;
     this.joystickVector.magnitude = 0;
+
+    if (this.btnSprint) {
+      this.btnSprint.classList.toggle('active', this.isSprintActive);
+    }
 
     if (this.joystickKnob) {
       this.joystickKnob.style.transform = `translate(0px, 0px)`;
@@ -433,7 +438,7 @@ export class TouchControls {
   }
 
   isSprinting() {
-    return this.isSprintActive;
+    return this.isSprintActive || Boolean(this.isAutoSprinting);
   }
 
   getTouchesDistance(touches, id1, id2) {

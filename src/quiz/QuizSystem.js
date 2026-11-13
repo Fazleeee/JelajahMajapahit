@@ -122,15 +122,6 @@ export class QuizSystem {
       this.modal.addEventListener('mousedown', (e) => e.stopPropagation());
     }
 
-    window.addEventListener('keydown', (e) => {
-      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
-      if (e.code === 'KeyK') {
-        this.toggle();
-      } else if (e.code === 'Escape' && this.modal && !this.modal.classList.contains('hidden')) {
-        this.close();
-      }
-    });
-
     if (this.btnNextQuestion) {
       this.btnNextQuestion.addEventListener('click', () => {
         this.nextQuestion();

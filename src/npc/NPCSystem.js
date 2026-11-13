@@ -315,29 +315,23 @@ export class NPCSystem {
       let haloColor = '#ffd700';
 
       if (questSystem) {
-        const qState = questSystem.getNPCDialogueState(item.data.id);
-        if (qState) {
-          if (qState.questCanTurnIn) {
-            badgeType = 'turn_in'; // 🏆 Siap diserahkan & selesai!
-            floorColor = '#5df2bd';
-            haloColor = '#5df2bd';
-          } else if (qState.status === 'in_progress') {
-            badgeType = 'in_progress'; // 📜 Sedang berjalan, mengumpulkan artefak
-            floorColor = '#60a5fa';
-            haloColor = '#93c5fd';
-          } else if (qState.status === 'completed') {
-            badgeType = 'completed'; // ✅ Misi telah selesai
-            floorColor = '#10b981';
-            haloColor = '#6ee7b7';
-          }
-        } else {
-          // Cek apakah NPC ini adalah pemberi misi aktif yang belum diambil
-          const activeQ = questSystem.getActiveQuest();
-          if (activeQ && activeQ.npcId === item.data.id) {
-            badgeType = 'active_quest'; // ❗ Misi baru tersedia!
-            floorColor = '#f59e0b';
-            haloColor = '#fef08a';
-          }
+        const stateKey = questSystem.getNPCBadgeState(item.data.id);
+        if (stateKey === 'turn_in') {
+          badgeType = 'turn_in'; // 🏆 Siap diserahkan & selesai!
+          floorColor = '#5df2bd';
+          haloColor = '#5df2bd';
+        } else if (stateKey === 'in_progress') {
+          badgeType = 'in_progress'; // 📜 Sedang berjalan, mengumpulkan artefak
+          floorColor = '#60a5fa';
+          haloColor = '#93c5fd';
+        } else if (stateKey === 'completed') {
+          badgeType = 'completed'; // ✅ Misi telah selesai
+          floorColor = '#10b981';
+          haloColor = '#6ee7b7';
+        } else if (stateKey === 'active_quest') {
+          badgeType = 'active_quest'; // ❗ Misi baru tersedia!
+          floorColor = '#f59e0b';
+          haloColor = '#fef08a';
         }
       }
 

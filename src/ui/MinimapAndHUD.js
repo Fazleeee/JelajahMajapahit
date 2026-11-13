@@ -2,7 +2,7 @@ import { ZONES, LANDMARKS, BRIDGES } from '../world/WorldData.js';
 import { getRiverCenterZ } from '../world/Terrain.js';
 import { HISTORICAL_ARTIFACTS, VIEWPOINTS } from '../exploration/ExplorationSystem.js';
 import { NPC_DATA } from '../quests/QuestData.js';
-import { gameState, ModalTypes } from '../core/GameState.js';
+import { gameState, GameStates, ModalTypes } from '../core/GameState.js';
 import { eventBus, GameEvents } from '../core/EventBus.js';
 
 // Pemetaan Fraksi & Gelar Tradisional Tokoh Sejarah Kotaraja Majapahit
@@ -579,6 +579,7 @@ export class MinimapAndHUD {
 
     window.addEventListener('keydown', (e) => {
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+      if (gameState.currentState === GameStates.INTRO) return;
       if (e._majapahitKeyEHandled) return;
 
       if (e.code === 'KeyM') {
@@ -1091,7 +1092,9 @@ export class MinimapAndHUD {
     this.vpZoneEl.textContent = `${vp.name.toUpperCase()} • ${vp.zoneTitle}`;
     this.viewpointBanner.classList.remove('hidden');
 
-    setTimeout(() => {
+    if (this._viewpointBannerTimer) clearTimeout(this._viewpointBannerTimer);
+    this._viewpointBannerTimer = setTimeout(() => {
+      this._viewpointBannerTimer = null;
       this.viewpointBanner.classList.add('hidden');
     }, 4200);
   }

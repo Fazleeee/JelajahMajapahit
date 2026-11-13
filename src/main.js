@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { gameState, ModalTypes } from './core/GameState.js';
+import { gameState, GameStates, ModalTypes } from './core/GameState.js';
 import { eventBus, GameEvents } from './core/EventBus.js';
 import { spatialGrid } from './core/SpatialGrid.js';
 import { SOLID_COLLIDERS, LANDMARKS } from './world/WorldData.js';
@@ -43,10 +43,19 @@ class MajapahitWorldApp {
       this.isMobile ? 380 : 600
     );
 
-    this.renderer = new THREE.WebGLRenderer({
-      antialias: !this.isMobile || window.devicePixelRatio < 2,
-      powerPreference: 'high-performance'
-    });
+    try {
+      this.renderer = new THREE.WebGLRenderer({
+        antialias: !this.isMobile || window.devicePixelRatio < 2,
+        powerPreference: 'high-performance'
+      });
+    } catch (err) {
+      this.container.innerHTML =
+        '<div style="color:#f5e6c8;padding:32px;text-align:center;font-family:sans-serif;">' +
+        '<h2>WebGL Tidak Tersedia</h2>' +
+        '<p>Browser atau perangkat Anda tidak mendukung akselerasi WebGL untuk memuat dunia 3D Majapahit.</p>' +
+        '</div>';
+      throw err;
+    }
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMobile ? 1.35 : 2));
     this.renderer.shadowMap.enabled = true;
@@ -229,6 +238,7 @@ class MajapahitWorldApp {
     // Keyboard shortcuts for Time (T), Eagle Camera (V), and Single-Modal Guard (J / K)
     window.addEventListener('keydown', (e) => {
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+      if (gameState.currentState === GameStates.INTRO) return;
       if (e.code === 'KeyT') {
         const nextPreset = this.sky.cyclePreset();
         applyPresetUI(nextPreset);

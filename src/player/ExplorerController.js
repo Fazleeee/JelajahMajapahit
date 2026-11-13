@@ -57,7 +57,9 @@ export class ExplorerController {
     // Cinematic Viewpoint Sweep State
     this.isCinematicSync = false;
     this.cinematicTimer = 0;
+    this._viewpointTimeoutId = null;
     this.cinematicCenter = new THREE.Vector3();
+    this.isSprintingNow = false;
 
     // Pre-allocated scratch vectors (Zero GC allocation per frame)
     this._forward = new THREE.Vector3();
@@ -95,7 +97,7 @@ export class ExplorerController {
       // Munculkan efek partikel sesuai pijakan
       if (this.isWater) {
         this.particles.spawnWaterRipple(this.position, 0.26);
-      } else if (this.keys.sprint && this.isGrounded) {
+      } else if (this.isSprintingNow && this.isGrounded) {
         this.particles.spawnDust(this.position);
       }
     });
@@ -169,6 +171,7 @@ export class ExplorerController {
           }
           break;
         case 'KeyF':
+          if (gameState.currentState === GameStates.INTRO) return;
           this.toggleLenteraWaktu();
           break;
       }
@@ -323,7 +326,9 @@ export class ExplorerController {
       })
     );
 
-    setTimeout(() => {
+    if (this._viewpointTimeoutId) clearTimeout(this._viewpointTimeoutId);
+    this._viewpointTimeoutId = setTimeout(() => {
+      this._viewpointTimeoutId = null;
       this.isCinematicSync = false;
     }, 3800);
   }
@@ -441,6 +446,7 @@ export class ExplorerController {
     // Kecepatan adaptif (dukung Sprint fisik tombol keyboard & tombol Sprint mobile)
     let speed = this.baseSpeed;
     const isSprinting = this.keys.sprint || (this.touchControls && this.touchControls.isSprinting());
+    this.isSprintingNow = isSprinting;
     if (this.isWater) {
       speed *= this.waterSpeedMultiplier;
     } else if (isSprinting) {
@@ -506,7 +512,7 @@ export class ExplorerController {
     this.characterRig.update(
       {
         isMoving,
-        isSprinting: this.keys.sprint,
+        isSprinting: this.isSprintingNow,
         isGrounded: this.isGrounded,
         isWater: this.isWater,
         verticalVelocity: this.verticalVelocity,

@@ -161,7 +161,8 @@ export class ExplorationSystem {
   loadCollectedStorage() {
     try {
       const saved = localStorage.getItem('majapahit_relics_collected');
-      return saved ? JSON.parse(saved) : [];
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
@@ -178,7 +179,8 @@ export class ExplorationSystem {
   loadViewpointStorage() {
     try {
       const saved = localStorage.getItem('majapahit_viewpoints_synced');
-      return saved ? JSON.parse(saved) : [];
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }

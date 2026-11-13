@@ -5,9 +5,17 @@ export class QuestSystem {
     this.exploration = explorationSystem;
     this.audio = audioSystem;
 
-    // Load quest states from localStorage
-    this.activeQuestId = this.loadActiveQuestStorage() || 'quest_1_rempah';
+    // Load quest states from localStorage (validate array & prevent stale resurrection)
     this.completedQuestIds = this.loadCompletedQuestsStorage();
+    const savedActive = this.loadActiveQuestStorage();
+    if (savedActive === 'NONE') {
+      this.activeQuestId = null;
+    } else if (savedActive && this.getQuest(savedActive) && !this.completedQuestIds.includes(savedActive)) {
+      this.activeQuestId = savedActive;
+    } else {
+      const nextUnfinished = QUESTS.find((q) => !this.completedQuestIds.includes(q.id));
+      this.activeQuestId = nextUnfinished ? nextUnfinished.id : null;
+    }
   }
 
   loadActiveQuestStorage() {
@@ -20,9 +28,7 @@ export class QuestSystem {
 
   saveActiveQuestStorage() {
     try {
-      if (this.activeQuestId) {
-        localStorage.setItem('majapahit_active_quest', this.activeQuestId);
-      }
+      localStorage.setItem('majapahit_active_quest', this.activeQuestId || 'NONE');
     } catch {
       // storage unavailable
     }
@@ -31,7 +37,8 @@ export class QuestSystem {
   loadCompletedQuestsStorage() {
     try {
       const saved = localStorage.getItem('majapahit_completed_quests');
-      return saved ? JSON.parse(saved) : [];
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
@@ -101,6 +108,20 @@ export class QuestSystem {
     );
 
     return quest;
+  }
+
+  // Zero-allocation badge state lookup for per-frame NPC overhead icons
+  getNPCBadgeState(npcId) {
+    const relatedQuest = QUESTS.find((q) => q.npcId === npcId);
+    if (relatedQuest) {
+      if (this.isQuestCompleted(relatedQuest.id)) return 'completed';
+      if (this.activeQuestId === relatedQuest.id) {
+        return this.canCompleteQuest(relatedQuest.id) ? 'turn_in' : 'in_progress';
+      }
+    }
+    const activeQ = this.getActiveQuest();
+    if (activeQ && activeQ.npcId === npcId) return 'active_quest';
+    return 'chat';
   }
 
   // Ambil state dialog dinamis untuk NPC tertentu
