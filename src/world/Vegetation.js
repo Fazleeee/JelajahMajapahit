@@ -211,11 +211,22 @@ export class VegetationAndNatureSystem {
       // Aerial roots
       for (let i = 0; i < 6; i++) {
         const angle = (i / 6) * Math.PI * 2;
-        childObj.position.set(Math.cos(angle) * 2.3, 2.75, Math.sin(angle) * 2.3);
+        const rx = Math.cos(angle) * 2.3;
+        const rz = Math.sin(angle) * 2.3;
+        childObj.position.set(rx, 2.75, rz);
         childObj.rotation.set(0, 0, 0);
         childObj.scale.setScalar(1);
         parentObj.updateMatrixWorld(true);
         rootMatrices.push(childObj.matrixWorld.clone());
+
+        this.colliders.push({
+          type: 'circle',
+          x: bx + rx,
+          z: bz + rz,
+          radius: 0.24,
+          yMin: -2.0,
+          yMax: by + 6.5
+        });
       }
 
       // Canopy puffs
@@ -429,7 +440,7 @@ export class VegetationAndNatureSystem {
       dummy.updateMatrix();
       rockMatrices.push(dummy.matrix.clone());
 
-      if (rSize >= 0.75) {
+      if (rSize >= 0.58) {
         this.colliders.push({
           type: 'circle',
           x: rx,
@@ -501,42 +512,81 @@ export class VegetationAndNatureSystem {
       [-35, -1], [-78, 2], [-112, 16]
     ];
 
+    const plinthMatrices = [];
     const pillarMatrices = [];
+    const collarMatrices = [];
+    const bowlMatrices = [];
     const flameMatrices = [];
     const dummy = new THREE.Object3D();
 
     torchCoords.forEach(([tx, tz]) => {
       const ty = getTerrainHeight(tx, tz);
 
-      // Stand base
-      dummy.position.set(tx, ty + 1.1, tz);
+      // Stepped octagonal plinth base
+      dummy.position.set(tx, ty + 0.18, tz);
       dummy.rotation.set(0, 0, 0);
       dummy.scale.setScalar(1);
       dummy.updateMatrix();
+      plinthMatrices.push(dummy.matrix.clone());
+
+      // Tapered carved octagonal column shaft
+      dummy.position.set(tx, ty + 1.25, tz);
+      dummy.updateMatrix();
       pillarMatrices.push(dummy.matrix.clone());
 
+      // Ornate gold collar trim
+      dummy.position.set(tx, ty + 2.18, tz);
+      dummy.updateMatrix();
+      collarMatrices.push(dummy.matrix.clone());
+
+      // Flared brazier bowl
+      dummy.position.set(tx, ty + 2.38, tz);
+      dummy.updateMatrix();
+      bowlMatrices.push(dummy.matrix.clone());
+
       // Flame cone
-      dummy.position.set(tx, ty + 2.55, tz);
+      dummy.position.set(tx, ty + 2.75, tz);
       dummy.updateMatrix();
       flameMatrices.push(dummy.matrix.clone());
 
-      this.torchPositions.push({ x: tx, y: ty + 2.9, z: tz });
+      this.torchPositions.push({ x: tx, y: ty + 3.05, z: tz });
 
       this.colliders.push({
         type: 'circle',
         x: tx,
         z: tz,
-        radius: 0.52,
+        radius: 0.56,
         yMin: -2.0,
         yMax: ty + 5.0
       });
     });
 
     this.createInstancedGroup(
-      new THREE.BoxGeometry(0.85, 2.2, 0.85),
+      new THREE.CylinderGeometry(0.56, 0.68, 0.36, 8),
+      this.rockMat,
+      plinthMatrices,
+      false,
+      true
+    );
+    this.createInstancedGroup(
+      new THREE.CylinderGeometry(0.28, 0.44, 1.85, 8),
       this.brickMat,
       pillarMatrices,
       !this.isMobile,
+      false
+    );
+    this.createInstancedGroup(
+      new THREE.CylinderGeometry(0.38, 0.32, 0.22, 8),
+      this.goldMat,
+      collarMatrices,
+      false,
+      false
+    );
+    this.createInstancedGroup(
+      new THREE.CylinderGeometry(0.48, 0.24, 0.28, 8),
+      this.banyanTrunkMat,
+      bowlMatrices,
+      false,
       false
     );
     this.createInstancedGroup(
@@ -558,10 +608,12 @@ export class VegetationAndNatureSystem {
     }
   }
 
-  // 6. Historical Signposts / Prasasti Markers at the 10 Landmarks
+  // 6. Historical Signposts / Prasasti Markers at the 10 Landmarks (Sculpted Jawa Timur Stele Silhouette)
   buildHistoricalSignposts() {
     const baseMatrices = [];
+    const trimMatrices = [];
     const bodyMatrices = [];
+    const crownMatrices = [];
     const dummy = new THREE.Object3D();
     const ringGeo = new THREE.RingGeometry(1.8, 2.15, 24);
     ringGeo.rotateX(-Math.PI / 2);
@@ -577,21 +629,32 @@ export class VegetationAndNatureSystem {
       const y = getTerrainHeight(lm.position.x, lm.position.z);
       const baseY = Math.max(y, 1.6);
 
-      dummy.position.set(lm.position.x, baseY + 0.25, lm.position.z);
+      dummy.position.set(lm.position.x, baseY + 0.22, lm.position.z);
       dummy.rotation.set(0, 0, 0);
       dummy.scale.setScalar(1);
       dummy.updateMatrix();
       baseMatrices.push(dummy.matrix.clone());
 
-      dummy.position.set(lm.position.x, baseY + 1.5, lm.position.z);
+      dummy.position.set(lm.position.x, baseY + 0.48, lm.position.z);
+      dummy.updateMatrix();
+      trimMatrices.push(dummy.matrix.clone());
+
+      dummy.position.set(lm.position.x, baseY + 1.45, lm.position.z);
+      dummy.scale.set(1.2, 1.0, 0.65);
       dummy.updateMatrix();
       bodyMatrices.push(dummy.matrix.clone());
+
+      dummy.position.set(lm.position.x, baseY + 2.42, lm.position.z);
+      dummy.rotation.set(Math.PI / 2, 0, 0);
+      dummy.scale.set(1.15, 0.65, 1.0);
+      dummy.updateMatrix();
+      crownMatrices.push(dummy.matrix.clone());
 
       const marker = new THREE.Group();
       marker.position.set(lm.position.x, baseY, lm.position.z);
 
       const goldEmblem = new THREE.Mesh(emblemGeo, this.goldMat);
-      goldEmblem.position.y = 3.1;
+      goldEmblem.position.y = 3.25;
       marker.add(goldEmblem);
 
       const ring = new THREE.Mesh(ringGeo, ringMat);
@@ -608,8 +671,10 @@ export class VegetationAndNatureSystem {
       });
     });
 
-    this.createInstancedGroup(new THREE.BoxGeometry(1.8, 0.5, 1.2), this.brickMat, baseMatrices, false, false);
-    this.createInstancedGroup(new THREE.BoxGeometry(1.2, 2.3, 0.45), this.rockMat, bodyMatrices, !this.isMobile, false);
+    this.createInstancedGroup(new THREE.CylinderGeometry(0.95, 1.18, 0.44, 8), this.brickMat, baseMatrices, false, true);
+    this.createInstancedGroup(new THREE.CylinderGeometry(0.76, 0.88, 0.14, 8), this.goldMat, trimMatrices, false, false);
+    this.createInstancedGroup(new THREE.CylinderGeometry(0.46, 0.62, 1.9, 6), this.rockMat, bodyMatrices, !this.isMobile, false);
+    this.createInstancedGroup(new THREE.CylinderGeometry(0.46, 0.46, 0.42, 12), this.rockMat, crownMatrices, false, false);
   }
 
   // 7. Ambient Fireflies / Golden Dust Particles (Animated 100% on GPU Vertex Shader!)

@@ -34,8 +34,8 @@ export const HISTORICAL_ARTIFACTS = [
     id: 'celengan_terakota',
     title: 'Celengan Babi Terakota Trowulan',
     zone: 'Kolam Segaran',
-    coords: { x: -35, z: 28 },
-    hint: 'Terselip di sudut tanggul bata merah tenggara Kolam Segaran',
+    coords: { x: -31.6, z: 29.5 },
+    hint: 'Terselip di luar sudut tanggul bata merah tenggara Kolam Segaran',
     era: 'Abad ke-14–15 M',
     lore: 'Karya seni tanah liat bakar (terakota) berbentuk babi hutan (celeng) dengan lubang koin di punggungnya. Ini adalah bukti autentik masyarakat Majapahit kuno sudah mengenal budaya menabung koin Gobog.'
   },
@@ -215,12 +215,15 @@ export class ExplorationSystem {
       opacity: 0.65
     });
 
-    // Shared Geometries for all 10 artifact chests
-    this.geoChestBase = new THREE.BoxGeometry(0.85, 0.42, 0.6);
-    this.geoChestLid = new THREE.BoxGeometry(0.9, 0.22, 0.65);
-    this.geoGlowOrb = new THREE.OctahedronGeometry(0.22, 0);
-    this.geoBeaconPillar = new THREE.CylinderGeometry(0.35, 0.65, 38, 12, 1, true);
-    this.geoGroundRing = new THREE.RingGeometry(1.2, 1.45, 20);
+    // Shared Geometries for all 10 sculpted Majapahit treasure chests
+    this.geoChestPlinth = new THREE.CylinderGeometry(0.56, 0.64, 0.14, 8);
+    this.geoChestBase = new THREE.CylinderGeometry(0.46, 0.50, 0.36, 8);
+    this.geoChestRim = new THREE.CylinderGeometry(0.49, 0.49, 0.08, 8);
+    this.geoChestLid = new THREE.CylinderGeometry(0.29, 0.29, 0.84, 10, 1, false, 0, Math.PI);
+    this.geoChestLid.rotateZ(Math.PI / 2);
+    this.geoGlowOrb = new THREE.OctahedronGeometry(0.24, 1);
+    this.geoBeaconPillar = new THREE.CylinderGeometry(0.32, 0.68, 38, 12, 1, true);
+    this.geoGroundRing = new THREE.RingGeometry(1.18, 1.44, 24);
     this.geoGroundRing.rotateX(-Math.PI / 2);
   }
 
@@ -233,14 +236,24 @@ export class ExplorationSystem {
       const group = new THREE.Group();
       group.position.set(x, y, z);
 
-      // Peti Kayu Ukir Terakota
+      // Batur Oktagonal & Peti Kayu Ukir Tutup Lengkung Majapahit
+      const chestPlinth = new THREE.Mesh(this.geoChestPlinth, this.matChestWood);
+      chestPlinth.position.y = 0.07;
+      chestPlinth.receiveShadow = true;
+      group.add(chestPlinth);
+
       const chestBase = new THREE.Mesh(this.geoChestBase, this.matChestWood);
-      chestBase.position.y = 0.21;
+      chestBase.position.y = 0.32;
       chestBase.castShadow = true;
       group.add(chestBase);
 
+      const chestRim = new THREE.Mesh(this.geoChestRim, this.matChestGold);
+      chestRim.position.y = 0.50;
+      group.add(chestRim);
+
       const chestLid = new THREE.Mesh(this.geoChestLid, this.matChestGold);
-      chestLid.position.y = 0.48;
+      chestLid.position.y = 0.52;
+      chestLid.scale.set(1.0, 0.72, 1.0);
       chestLid.castShadow = true;
       group.add(chestLid);
 

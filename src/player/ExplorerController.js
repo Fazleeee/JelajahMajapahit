@@ -72,6 +72,14 @@ export class ExplorerController {
 
     this.particles = new ParticleFX(scene);
 
+    // Precompute ground Prasasti stone stele colliders (hindari yang di dalam jembatan/terbang)
+    this.steleObstacles = LANDMARKS
+      .filter((lm) => !['jembatan_brantas', 'candi_bajang_ratu', 'balairung_kencana', 'kapal_jung'].includes(lm.id))
+      .map((lm) => {
+        const y = Math.max(getTerrainHeight(lm.position.x, lm.position.z), 1.6);
+        return { x: lm.position.x, z: lm.position.z, yMin: y - 0.6, yMax: y + 2.6, radius: 0.46 };
+      });
+
     this.initFootstepAudioBinding();
     this.bindEvents();
     this.touchControls = new TouchControls(this.domElement, this);
@@ -342,6 +350,44 @@ export class ExplorerController {
           ) {
             return false;
           }
+        }
+      }
+    }
+
+    // Hitbox Tubuh Tokoh Sejarah NPC agar pemain tidak menembus tubuh tokoh
+    if (this.npcSystem && this.npcSystem.npcMeshes) {
+      for (let i = 0; i < this.npcSystem.npcMeshes.length; i++) {
+        const item = this.npcSystem.npcMeshes[i];
+        const ny = item.group.position.y;
+        if (currentY >= ny - 1.0 && currentY <= ny + 2.4) {
+          const r = 0.42 + playerRadius;
+          const d2 = (targetX - item.data.coords.x) ** 2 + (targetZ - item.data.coords.z) ** 2;
+          if (d2 < r * r) return false;
+        }
+      }
+    }
+
+    // Hitbox Peti Artefak Sejarah
+    if (this.exploration && this.exploration.artifactMeshes) {
+      for (let i = 0; i < this.exploration.artifactMeshes.length; i++) {
+        const item = this.exploration.artifactMeshes[i];
+        const ay = item.group.position.y;
+        if (currentY >= ay - 0.8 && currentY <= ay + 1.4) {
+          const r = 0.36 + playerRadius;
+          const d2 = (targetX - item.data.coords.x) ** 2 + (targetZ - item.data.coords.z) ** 2;
+          if (d2 < r * r) return false;
+        }
+      }
+    }
+
+    // Hitbox Prasasti Sejarah Batu
+    if (this.steleObstacles) {
+      for (let i = 0; i < this.steleObstacles.length; i++) {
+        const st = this.steleObstacles[i];
+        if (currentY >= st.yMin && currentY <= st.yMax) {
+          const r = st.radius + playerRadius;
+          const d2 = (targetX - st.x) ** 2 + (targetZ - st.z) ** 2;
+          if (d2 < r * r) return false;
         }
       }
     }

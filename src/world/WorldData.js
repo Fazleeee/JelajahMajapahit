@@ -82,7 +82,7 @@ export const LANDMARKS = [
   {
     id: 'kolam_segaran',
     title: 'Kolam Segaran & Rekayasa Air Kuno',
-    position: { x: -36, z: 8 },
+    position: { x: -31.8, z: 5.0 },
     radius: 16,
     text: 'Waduk buatan seluas 6,5 hektar dengan dinding bata tebal setinggi 3 meter. Berfungsi sebagai penampung air banjir, irigasi sawah di musim kemarau, serta tempat pesta jamuan air para duta asing.'
   },
@@ -143,28 +143,29 @@ export const ARCH_COLLIDERS = [
   // Tangga timur menurun dari teras candi (y: 13.4m) ke pelataran Sanggar Pujangga (y: 9.8m)
   { type: 'ramp', xMin: 113.0, xMax: 121.5, zMin: -12.8, zMax: -7.2, yStart: 13.4, yEnd: 9.8, axis: 'x' },
 
-  // 2. Kolam Segaran - Tangga Bata Merah Keluar/Masuk Kolam
+  // 2. Kolam Segaran - Tangga Bata Merah Keluar/Masuk Kolam (Sesuai Tangga Visual Timur & Selatan)
   // Tangga Timur Kolam Segaran (menghadap jalan utama Kotaraja)
-  { type: 'ramp', xMin: -42.5, xMax: -33.0, zMin: 0.5, zMax: 9.5, yStart: -0.4, yEnd: 2.05, axis: 'x' },
+  { type: 'ramp', xMin: -42.5, xMax: -32.8, zMin: 1.4, zMax: 8.6, yStart: -0.4, yEnd: 2.05, axis: 'x' },
   // Tangga Selatan Kolam Segaran
-  { type: 'ramp', xMin: -56.5, xMax: -47.5, zMin: 23.5, zMax: 33.0, yStart: -0.4, yEnd: 2.05, axis: 'z' },
-  // Tangga Barat & Utara Kolam Segaran agar dari sisi mana pun mudah keluar
-  { type: 'ramp', xMin: -71.0, xMax: -61.5, zMin: 0.5, zMax: 9.5, yStart: 2.05, yEnd: -0.4, axis: 'x' },
-  { type: 'ramp', xMin: -56.5, xMax: -47.5, zMin: -23.0, zMax: -13.5, yStart: 2.05, yEnd: -0.4, axis: 'z' },
+  { type: 'ramp', xMin: -55.8, xMax: -48.2, zMin: 24.0, zMax: 33.2, yStart: -0.4, yEnd: 2.05, axis: 'z' },
 
-  // 3. Kapal Layar Jung Jawa (x: -142..-116, z: 12..26)
-  // Titian naik (Gangway) dari dermaga kayu (x: -115, y: 1.85m) ke dek kapal (x: -122, y: 3.2m)
-  { type: 'ramp', xMin: -122, xMax: -115, zMin: 16.0, zMax: 22.0, yStart: 3.2, yEnd: 1.85, axis: 'x' },
+  // 3. Kapal Layar Jung Jawa & Dermaga Barat (x: -142..-114, z: 12..26)
+  // Titian naik (Gangway) dari sisi selatan Dermaga kayu (z: 26.2, y: 1.85m) ke geladak kapal (z: 23.2, y: 3.2m)
+  { type: 'ramp', xMin: -127.5, xMax: -123.5, zMin: 23.2, zMax: 26.2, yStart: 3.2, yEnd: 1.85, axis: 'z' },
   // Landasan penghubung landai dari tanah lapang (x: -110, y: 1.4m) ke dermaga kayu (x: -115, y: 1.85m)
   { type: 'ramp', xMin: -115, xMax: -110, zMin: 15.0, zMax: 23.0, yStart: 1.85, yEnd: 1.4, axis: 'x' },
   // Geladak Utama Kapal Jung
-  { type: 'box', xMin: -138, xMax: -121, zMin: 13, zMax: 25, topY: 3.2 },
+  { type: 'box', xMin: -138, xMax: -120.5, zMin: 14.0, zMax: 24.0, topY: 3.2 },
   // Geladak Buritan Nakhoda (Poop Deck)
-  { type: 'box', xMin: -142, xMax: -136, zMin: 14, zMax: 24, topY: 4.5 },
+  { type: 'box', xMin: -142, xMax: -136, zMin: 14.0, zMax: 24.0, topY: 4.5 },
   // Tangga naik ke buritan kapal
   { type: 'ramp', xMin: -136, xMax: -133, zMin: 17, zMax: 21, yStart: 3.2, yEnd: 4.5, axis: 'x' },
 
-  // 4. Kedaton Agung - Balairung Pendopo Kencana (x: -14..14, z: -126..-100)
+  // 4. Pondok Kayu Raden Wijaya Hutan Tarik (Panggung Kayu Terangkat)
+  { type: 'box', xMin: -19.5, xMax: -12.5, zMin: 117.0, zMax: 123.0, topY: 2.35 },
+  { type: 'ramp', xMin: -17.8, xMax: -14.2, zMin: 122.8, zMax: 124.2, yStart: 2.35, yEnd: 1.55, axis: 'z' },
+
+  // 5. Kedaton Agung - Balairung Pendopo Kencana (x: -14..14, z: -126..-100)
   // Tangga Selatan naik ke lantai Balairung Pendopo (dari halaman y: 3.6m ke panggung y: 4.6m)
   { type: 'ramp', xMin: -6.0, xMax: 6.0, zMin: -105.5, zMax: -100.5, yStart: 4.6, yEnd: 3.6, axis: 'z' },
   // Undakan panggung pendopo dari halaman keraton (y: 3.6m) ke lantai marmer bata (y: 4.6m)
@@ -224,6 +225,11 @@ export const SOLID_COLLIDERS = [
 
   // 3. Barak Pasukan Elit Bhayangkara (Markas Komando Militer Bata Merah, x: -98, z: 14)
   { type: 'box', xMin: -105.2, xMax: -90.8, zMin: 9.3, zMax: 18.7, yMin: -2.0, yMax: 10.0 },
+  // 4 Pilar Serambi Depan Barak Bhayangkara
+  { type: 'circle', x: -102.0, z: 19.7, radius: 0.36, yMin: -2.0, yMax: 6.5 },
+  { type: 'circle', x: -99.8, z: 19.7, radius: 0.36, yMin: -2.0, yMax: 6.5 },
+  { type: 'circle', x: -96.2, z: 19.7, radius: 0.36, yMin: -2.0, yMax: 6.5 },
+  { type: 'circle', x: -94.0, z: 19.7, radius: 0.36, yMin: -2.0, yMax: 6.5 },
   // Dua Rak Tombak Prajurit di depan Barak
   { type: 'box', xMin: -103.8, xMax: -101.2, zMin: 18.8, zMax: 19.6, yMin: -2.0, yMax: 6.0 },
   { type: 'box', xMin: -94.8, xMax: -92.2, zMin: 18.8, zMax: 19.6, yMin: -2.0, yMax: 6.0 },
@@ -281,8 +287,54 @@ export const SOLID_COLLIDERS = [
   { type: 'box', xMin: 13.2, xMax: 16.8, zMin: 16.0, zMax: 18.0, yMin: -2.0, yMax: 4.5 },
   { type: 'box', xMin: 21.2, xMax: 24.8, zMin: 15.0, zMax: 17.0, yMin: -2.0, yMax: 4.5 },
 
-  // 9. Kapal Layar Jung Jawa (Kabin Buritan Nakhoda & Tiang Layar Tanja Utama)
-  { type: 'box', xMin: -142.5, xMax: -138.5, zMin: 14.2, zMax: 23.8, yMin: 1.0, yMax: 9.0 },
+  // 9. Kapal Layar Jung Jawa (Kabin Buritan, 3 Tiang Layar, Haluan & Pagar Geladak)
+  { type: 'box', xMin: -142.5, xMax: -139.4, zMin: 14.2, zMax: 23.8, yMin: 1.0, yMax: 9.0 },
+  { type: 'box', xMin: -119.5, xMax: -112.2, zMin: 16.6, zMax: 21.4, yMin: -2.0, yMax: 7.5 },
   { type: 'circle', x: -122.5, z: 19.0, radius: 0.55, yMin: 0.0, yMax: 25.0 },
-  { type: 'circle', x: -129.2, z: 19.0, radius: 0.60, yMin: 0.0, yMax: 25.0 }
+  { type: 'circle', x: -129.2, z: 19.0, radius: 0.60, yMin: 0.0, yMax: 25.0 },
+  { type: 'circle', x: -134.8, z: 19.0, radius: 0.45, yMin: 0.0, yMax: 22.0 },
+  // Pagar Bulwark Geladak Utama & Buritan (Sisakan celah di Gangway selatan x: -127.5..-123.5)
+  { type: 'box', xMin: -137.0, xMax: -120.2, zMin: 13.7, zMax: 14.4, yMin: 2.0, yMax: 5.5 },
+  { type: 'box', xMin: -137.0, xMax: -127.8, zMin: 23.6, zMax: 24.3, yMin: 2.0, yMax: 5.5 },
+  { type: 'box', xMin: -123.2, xMax: -120.2, zMin: 23.6, zMax: 24.3, yMin: 2.0, yMax: 5.5 },
+  { type: 'box', xMin: -142.0, xMax: -136.0, zMin: 13.7, zMax: 14.4, yMin: 3.5, yMax: 6.8 },
+  { type: 'box', xMin: -142.0, xMax: -136.0, zMin: 23.6, zMax: 24.3, yMin: 3.5, yMax: 6.8 },
+
+  // 10. Kolam Segaran (Tembok Bata Keliling, 4 Pilar Tangga & 4 Menara Sudut Terakota)
+  { type: 'box', xMin: -70.0, xMax: -34.0, zMin: -22.6, zMax: -20.4, yMin: -2.0, yMax: 5.5 },
+  { type: 'box', xMin: -70.0, xMax: -56.0, zMin: 30.4, zMax: 32.6, yMin: -2.0, yMax: 5.5 },
+  { type: 'box', xMin: -48.0, xMax: -34.0, zMin: 30.4, zMax: 32.6, yMin: -2.0, yMax: 5.5 },
+  { type: 'box', xMin: -70.6, xMax: -68.4, zMin: -22.5, zMax: 32.5, yMin: -2.0, yMax: 5.5 },
+  { type: 'box', xMin: -35.6, xMax: -33.4, zMin: -22.5, zMax: 1.5, yMin: -2.0, yMax: 5.5 },
+  { type: 'box', xMin: -35.6, xMax: -33.4, zMin: 8.5, zMax: 32.5, yMin: -2.0, yMax: 5.5 },
+  // 4 Pilar Tangga Kolam Segaran
+  { type: 'box', xMin: -35.8, xMax: -33.2, zMin: -0.3, zMax: 2.3, yMin: -2.0, yMax: 6.0 },
+  { type: 'box', xMin: -35.8, xMax: -33.2, zMin: 7.7, zMax: 10.3, yMin: -2.0, yMax: 6.0 },
+  { type: 'box', xMin: -57.3, xMax: -54.7, zMin: 30.2, zMax: 32.8, yMin: -2.0, yMax: 6.0 },
+  { type: 'box', xMin: -49.3, xMax: -46.7, zMin: 30.2, zMax: 32.8, yMin: -2.0, yMax: 6.0 },
+  // 4 Menara Sudut Kolam Segaran
+  { type: 'box', xMin: -71.1, xMax: -67.9, zMin: -23.1, zMax: -19.9, yMin: -2.0, yMax: 6.5 },
+  { type: 'box', xMin: -36.1, xMax: -32.9, zMin: -23.1, zMax: -19.9, yMin: -2.0, yMax: 6.5 },
+  { type: 'box', xMin: -71.1, xMax: -67.9, zMin: 29.9, zMax: 33.1, yMin: -2.0, yMax: 6.5 },
+  { type: 'box', xMin: -36.1, xMax: -32.9, zMin: 29.9, zMax: 33.1, yMin: -2.0, yMax: 6.5 },
+
+  // 11. Pagar & Pilar Jembatan Sungai Brantas & Parit Kedaton + Tiang Dermaga Barat
+  // Jembatan Utama Sungai Brantas (xMin: -6.5, xMax: 6.5, z: 52..90)
+  { type: 'box', xMin: -6.5, xMax: -5.9, zMin: 52.0, zMax: 90.0, yMin: 1.0, yMax: 5.5 },
+  { type: 'box', xMin: 5.9, xMax: 6.5, zMin: 52.0, zMax: 90.0, yMin: 1.0, yMax: 5.5 },
+  // Jembatan Timur Sungai Brantas (xMin: 78, xMax: 88, z: 44..78)
+  { type: 'box', xMin: 78.0, xMax: 78.6, zMin: 44.0, zMax: 78.0, yMin: 1.0, yMax: 5.5 },
+  { type: 'box', xMin: 87.4, xMax: 88.0, zMin: 44.0, zMax: 78.0, yMin: 1.0, yMax: 5.5 },
+  // Jembatan Parit Pertahanan Kedaton (xMin: -6.5, xMax: 6.5, z: -76..-50)
+  { type: 'box', xMin: -6.5, xMax: -5.9, zMin: -76.0, zMax: -50.0, yMin: 1.0, yMax: 6.5 },
+  { type: 'box', xMin: 5.9, xMax: 6.5, zMin: -76.0, zMax: -50.0, yMin: 1.0, yMax: 6.5 },
+  // Tiang Tambat Kayu Dermaga Barat (Bollards)
+  { type: 'circle', x: -133.0, z: 13.0, radius: 0.48, yMin: -2.0, yMax: 4.5 },
+  { type: 'circle', x: -127.5, z: 13.0, radius: 0.48, yMin: -2.0, yMax: 4.5 },
+  { type: 'circle', x: -122.0, z: 13.0, radius: 0.48, yMin: -2.0, yMax: 4.5 },
+  { type: 'circle', x: -116.5, z: 13.0, radius: 0.48, yMin: -2.0, yMax: 4.5 },
+  { type: 'circle', x: -133.0, z: 25.0, radius: 0.48, yMin: -2.0, yMax: 4.5 },
+  { type: 'circle', x: -128.2, z: 25.0, radius: 0.48, yMin: -2.0, yMax: 4.5 },
+  { type: 'circle', x: -122.8, z: 25.0, radius: 0.48, yMin: -2.0, yMax: 4.5 },
+  { type: 'circle', x: -116.5, z: 25.0, radius: 0.48, yMin: -2.0, yMax: 4.5 }
 ];

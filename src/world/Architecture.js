@@ -88,12 +88,19 @@ export class ArchitectureSystem {
     const camp = new THREE.Group();
     camp.position.set(x, y, z);
 
-    // 1. Pondok Kayu Rintisan
-    const floor = new THREE.Mesh(new THREE.BoxGeometry(7, 0.4, 6), this.matWood);
-    floor.position.set(0, 0.7, 0);
+    // 1. Pondok Kayu Rintisan (Batur Panggung + Tangga Kayu + Atap Pelana Bertingkat)
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(7, 0.45, 6), this.matWood);
+    floor.position.set(0, 0.52, 0);
     floor.castShadow = true;
     floor.receiveShadow = true;
     camp.add(floor);
+
+    for (let s = 0; s < 3; s++) {
+      const step = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.2, 0.55), this.matWoodDark);
+      step.position.set(0, 0.1 + s * 0.22, 3.85 - s * 0.45);
+      step.castShadow = true;
+      camp.add(step);
+    }
 
     // 6 Tiang Penyangga
     const pillarPositions = [
@@ -101,7 +108,7 @@ export class ArchitectureSystem {
       [-3.1, 2.6], [0, 2.6], [3.1, 2.6]
     ];
     for (const [px, pz] of pillarPositions) {
-      const p = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 3.6, 6), this.matWoodDark);
+      const p = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 3.6, 8), this.matWoodDark);
       p.position.set(px, 1.8, pz);
       p.castShadow = true;
       camp.add(p);
@@ -109,20 +116,25 @@ export class ArchitectureSystem {
 
     // Dinding Bilik Kayu Belakang & Samping
     const backWall = new THREE.Mesh(new THREE.BoxGeometry(6.6, 2.4, 0.15), this.matWood);
-    backWall.position.set(0, 2.1, -2.6);
+    backWall.position.set(0, 2.0, -2.6);
     camp.add(backWall);
 
     const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.15, 2.4, 3.2), this.matWood);
-    leftWall.position.set(-3.1, 2.1, -1.0);
+    leftWall.position.set(-3.1, 2.0, -1.0);
     camp.add(leftWall);
 
-    // Atap Rumbia Miring (Limas Pelana)
-    const roof = new THREE.Mesh(new THREE.ConeGeometry(5.2, 2.2, 4), this.matThatch);
-    roof.position.set(0, 4.3, 0);
+    // Atap Rumbia Berundak + Balok Bubungan
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(5.4, 2.3, 4), this.matThatch);
+    roof.position.set(0, 4.35, 0);
     roof.rotation.y = Math.PI / 4;
-    roof.scale.set(1.1, 1, 0.9);
+    roof.scale.set(1.12, 1, 0.92);
     roof.castShadow = true;
     camp.add(roof);
+
+    const ridge = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 2.8, 8), this.matWoodDark);
+    ridge.rotation.z = Math.PI / 2;
+    ridge.position.set(0, 5.42, 0);
+    camp.add(ridge);
 
     // 2. Lumbung Padi Kuno (Pantangan Berpanggung)
     const granary = new THREE.Group();
@@ -250,26 +262,48 @@ export class ArchitectureSystem {
       stallGroup.position.set(s.x, sy, s.z);
       stallGroup.rotation.y = s.rot;
 
-      // Meja Kayu Dagang
-      const table = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.8, 1.8), this.matWood);
-      table.position.y = 0.45;
+      // Meja Kayu Dagang dengan Bingkai Lis
+      const table = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.78, 1.8), this.matWood);
+      table.position.y = 0.42;
       table.castShadow = true;
       stallGroup.add(table);
 
-      // 4 Tiang Bambu Kanopi
+      const tableRim = new THREE.Mesh(new THREE.BoxGeometry(3.78, 0.1, 1.96), this.matWoodDark);
+      tableRim.position.y = 0.84;
+      stallGroup.add(tableRim);
+
+      // 4 Tiang Bambu Kanopi Oktagonal
       for (const [px, pz] of [[-1.7, -0.8], [1.7, -0.8], [-1.7, 0.8], [1.7, 0.8]]) {
-        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 2.8, 6), this.matWoodDark);
-        pole.position.set(px, 1.4, pz);
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 2.9, 8), this.matWoodDark);
+        pole.position.set(px, 1.45, pz);
         stallGroup.add(pole);
       }
 
-      // Atap Miring Kain Terpal / Jerami
+      // Atap Pelana Kembar Khas Warung Majapahit + Kain Rumbai Depan
       const roofMat = idx % 2 === 0 ? this.matBannerRed : this.matThatch;
-      const roof = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.12, 2.6), roofMat);
-      roof.position.set(0, 2.8, 0.2);
-      roof.rotation.x = 0.22;
-      roof.castShadow = true;
-      stallGroup.add(roof);
+      const frontRoof = new THREE.Mesh(new THREE.BoxGeometry(4.3, 0.1, 1.45), roofMat);
+      frontRoof.position.set(0, 2.86, 0.65);
+      frontRoof.rotation.x = 0.34;
+      frontRoof.castShadow = true;
+      stallGroup.add(frontRoof);
+
+      const backRoof = new THREE.Mesh(new THREE.BoxGeometry(4.3, 0.1, 1.45), roofMat);
+      backRoof.position.set(0, 2.86, -0.65);
+      backRoof.rotation.x = -0.34;
+      backRoof.castShadow = true;
+      stallGroup.add(backRoof);
+
+      const ridgeBeam = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 4.45, 8), this.matWoodDark);
+      ridgeBeam.rotation.z = Math.PI / 2;
+      ridgeBeam.position.set(0, 3.12, 0);
+      stallGroup.add(ridgeBeam);
+
+      const valance = new THREE.Mesh(
+        new THREE.BoxGeometry(4.1, 0.24, 0.06),
+        idx % 2 === 0 ? this.matGold : this.matBannerRed
+      );
+      valance.position.set(0, 2.54, 1.28);
+      stallGroup.add(valance);
 
       // Komoditas Dagangan di Meja
       if (idx === 0) {
@@ -475,18 +509,79 @@ export class ArchitectureSystem {
     const barak = new THREE.Group();
     barak.position.set(x, y, z);
 
-    // Bangunan Markas Militer Bata Merah Kokoh
-    const mainHall = new THREE.Mesh(new THREE.BoxGeometry(14, 4.5, 9), this.matBrickRed);
-    mainHall.position.y = 2.25;
+    // 1. Batur Kaki Candi Berundak Markas Militer
+    const batur = new THREE.Mesh(new THREE.BoxGeometry(15.2, 0.7, 10.2), this.matBrickDark);
+    batur.position.y = 0.35;
+    batur.receiveShadow = true;
+    barak.add(batur);
+
+    // 2. Bangunan Markas Utama + Pilaster Sudut & Sabuk Lis Bata Merah
+    const mainHall = new THREE.Mesh(new THREE.BoxGeometry(14, 4.3, 9), this.matBrickRed);
+    mainHall.position.y = 2.55;
     mainHall.castShadow = true;
     barak.add(mainHall);
 
-    // Atap Pelana Bata Merah
-    const roof = new THREE.Mesh(new THREE.ConeGeometry(9.2, 3.2, 4), this.matBrickDark);
-    roof.position.y = 5.8;
-    roof.rotation.y = Math.PI / 4;
-    roof.scale.set(1.25, 0.9, 0.85);
-    barak.add(roof);
+    const wallBelt = new THREE.Mesh(new THREE.BoxGeometry(14.35, 0.32, 9.35), this.matBrickTrim);
+    wallBelt.position.y = 4.6;
+    barak.add(wallBelt);
+
+    for (const px of [-6.9, 0, 6.9]) {
+      for (const pz of [-4.45, 4.45]) {
+        const pilaster = new THREE.Mesh(new THREE.BoxGeometry(0.85, 4.5, 0.65), this.matBrickDark);
+        pilaster.position.set(px, 2.55, pz);
+        barak.add(pilaster);
+      }
+    }
+
+    // Gerbang Kayu Jati Ganda & Relung Lengkung Surya Bhayangkara
+    const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(3.2, 3.2, 0.4), this.matBrickDark);
+    doorFrame.position.set(0, 2.0, 4.55);
+    barak.add(doorFrame);
+
+    const doorPanel = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.8, 0.35), this.matWoodDark);
+    doorPanel.position.set(0, 1.9, 4.65);
+    barak.add(doorPanel);
+
+    const emblemArch = new THREE.Mesh(new THREE.OctahedronGeometry(0.5, 0), this.matGold);
+    emblemArch.position.set(0, 3.85, 4.82);
+    barak.add(emblemArch);
+
+    // 3. Serambi Depan Berpilar Kayu (Portico) & Atap Kanopi
+    for (const px of [-4.0, -1.8, 1.8, 4.0]) {
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 3.4, 8), this.matWoodDark);
+      col.position.set(px, 1.9, 5.7);
+      col.castShadow = true;
+      barak.add(col);
+
+      const plinth = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.38, 0.4, 8), this.matStoneSteps);
+      plinth.position.set(px, 0.2, 5.7);
+      barak.add(plinth);
+    }
+
+    const porchRoof = new THREE.Mesh(new THREE.BoxGeometry(10.2, 0.2, 2.4), this.matBrickTrim);
+    porchRoof.position.set(0, 3.75, 5.4);
+    porchRoof.rotation.x = 0.22;
+    porchRoof.castShadow = true;
+    barak.add(porchRoof);
+
+    // 4. Atap Tajug Dua Susun Khas Majapahit + Mastaka Emas
+    const lowerRoof = new THREE.Mesh(new THREE.ConeGeometry(9.6, 2.4, 4), this.matBrickDark);
+    lowerRoof.position.y = 5.7;
+    lowerRoof.rotation.y = Math.PI / 4;
+    lowerRoof.scale.set(1.26, 0.9, 0.88);
+    lowerRoof.castShadow = true;
+    barak.add(lowerRoof);
+
+    const upperRoof = new THREE.Mesh(new THREE.ConeGeometry(5.6, 2.1, 4), this.matBrickTrim);
+    upperRoof.position.y = 7.45;
+    upperRoof.rotation.y = Math.PI / 4;
+    upperRoof.scale.set(1.25, 0.9, 0.85);
+    upperRoof.castShadow = true;
+    barak.add(upperRoof);
+
+    const mastaka = new THREE.Mesh(new THREE.OctahedronGeometry(0.55, 0), this.matGold);
+    mastaka.position.y = 8.75;
+    barak.add(mastaka);
 
     // Rak Tombak Prajurit di Pelataran Luar
     for (const side of [-4.5, 4.5]) {
@@ -539,41 +634,86 @@ export class ArchitectureSystem {
     const ship = new THREE.Group();
     ship.position.set(x, y, z);
 
-    // 1. Lambung Utama Kayu Jati Ganda (Double-planked Teak Hull)
+    // 1. Lambung Utama Kayu Jati Ganda & Sabuk Gading-Gading (Dek Utama Y Dunia = 3.20m)
     const hullMat = this.matWoodDark;
 
-    // Bagian Tengah Lambung
-    const midHull = new THREE.Mesh(new THREE.BoxGeometry(18, 4.2, 9.5), hullMat);
-    midHull.position.set(0, 1.4, 0);
+    // Bagian Tengah Lambung (Top local = 2.85 -> World = 3.20)
+    const midHull = new THREE.Mesh(new THREE.BoxGeometry(18, 3.4, 9.4), hullMat);
+    midHull.position.set(0, 1.15, 0);
     midHull.castShadow = true;
     ship.add(midHull);
 
-    // Haluan Kapal (Bow - Moncong Depan Melengkung ke arah Z positif)
-    const bow = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 4.8, 8.5, 4), hullMat);
-    bow.position.set(11.5, 1.8, 0);
+    // Sabuk papan lambung berundak & lunas agar tidak seperti kotak polos
+    const hullTrim = new THREE.Mesh(new THREE.BoxGeometry(18.6, 0.36, 9.85), this.matWood);
+    hullTrim.position.set(0, 2.55, 0);
+    ship.add(hullTrim);
+
+    // Pagar Bulwark Geladak Utama (Utara, Selatan Barat & Selatan Timur — Celah Gangway di x = 0.5..4.5)
+    const railNorth = new THREE.Mesh(new THREE.BoxGeometry(17.8, 0.72, 0.32), this.matWood);
+    railNorth.position.set(0, 3.18, -4.55);
+    ship.add(railNorth);
+
+    const railSouthW = new THREE.Mesh(new THREE.BoxGeometry(9.2, 0.72, 0.32), this.matWood);
+    railSouthW.position.set(-4.3, 3.18, 4.55);
+    ship.add(railSouthW);
+
+    const railSouthE = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.72, 0.32), this.matWood);
+    railSouthE.position.set(6.7, 3.18, 4.55);
+    ship.add(railSouthE);
+
+    // Haluan Kapal Meruncing + Cucur Garuda Emas (Bow)
+    const bow = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 4.6, 8.6, 6), hullMat);
+    bow.position.set(11.6, 1.65, 0);
     bow.rotation.z = -Math.PI / 2;
-    bow.scale.set(0.85, 1.0, 1.05);
+    bow.scale.set(0.78, 1.0, 1.02);
     ship.add(bow);
 
-    // Buritan Kapal Bertingkat (Poop Deck)
-    const stern = new THREE.Mesh(new THREE.BoxGeometry(7.2, 5.8, 9.2), hullMat);
-    stern.position.set(-10.8, 2.4, 0);
+    const bowsprit = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.24, 5.2, 8), this.matWood);
+    bowsprit.position.set(15.6, 3.8, 0);
+    bowsprit.rotation.z = -Math.PI / 2 + 0.32;
+    ship.add(bowsprit);
+
+    const figurehead = new THREE.Mesh(new THREE.OctahedronGeometry(0.45, 0), this.matGold);
+    figurehead.position.set(17.8, 4.6, 0);
+    ship.add(figurehead);
+
+    // Buritan Kapal Bertingkat (Poop Deck: Top local = 4.15 -> World = 4.50)
+    const stern = new THREE.Mesh(new THREE.BoxGeometry(6.8, 4.6, 9.2), hullMat);
+    stern.position.set(-11.2, 1.85, 0);
     stern.castShadow = true;
     ship.add(stern);
 
-    // 2. Titian Penghubung (Gangway) dari Dermaga ke Geladak Kapal
-    const gangway = new THREE.Mesh(new THREE.BoxGeometry(6.2, 0.3, 2.2), this.matWood);
-    gangway.position.set(9.5, 2.2, 5.2);
-    gangway.rotation.y = -0.35;
-    gangway.rotation.x = -0.16;
+    const sternCabin = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.2, 8.6), this.matWood);
+    sternCabin.position.set(-13.0, 5.2, 0);
+    sternCabin.castShadow = true;
+    ship.add(sternCabin);
+
+    const sternRoof = new THREE.Mesh(new THREE.CylinderGeometry(4.6, 4.6, 3.6, 6, 1, false, 0, Math.PI), this.matBrickRed);
+    sternRoof.rotation.z = Math.PI / 2;
+    sternRoof.rotation.y = Math.PI / 2;
+    sternRoof.position.set(-13.0, 6.2, 0);
+    sternRoof.scale.set(1, 0.35, 1);
+    ship.add(sternRoof);
+
+    // Tangga Kayu dari Dek Utama ke Buritan
+    for (let st = 0; st < 4; st++) {
+      const sMesh = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.28, 3.6), this.matWood);
+      sMesh.position.set(-5.2 - st * 0.72, 3.0 + st * 0.32, 0);
+      ship.add(sMesh);
+    }
+
+    // 2. Titian Penghubung Lebar (Gangway) dari Sisi Selatan Dermaga ke Geladak Utama
+    const gangway = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.28, 3.6), this.matWood);
+    gangway.position.set(2.5, 2.15, 5.7);
+    gangway.rotation.x = 0.42;
     gangway.castShadow = true;
     ship.add(gangway);
 
-    // 3. Tiga Tiang Layar Tanja (Fore, Main, Mizzen Mast)
+    // 3. Tiga Tiang Layar Tanja (Fore, Main, Mizzen Mast - Mizzen di -6.8m -> World -134.8)
     const masts = [
       { x: 5.5, h: 18, radius: 0.32, sailW: 8.5, sailH: 9.5 },
       { x: -1.2, h: 22, radius: 0.42, sailW: 10.5, sailH: 12.0 },
-      { x: -8.5, h: 16, radius: 0.30, sailW: 7.2, sailH: 8.0 }
+      { x: -6.8, h: 16, radius: 0.28, sailW: 6.8, sailH: 7.8 }
     ];
 
     masts.forEach((m, idx) => {
@@ -582,6 +722,15 @@ export class ArchitectureSystem {
       pole.position.set(m.x, m.h * 0.5 + 2.8, 0);
       pole.castShadow = true;
       ship.add(pole);
+
+      // Palang Bambu Atas & Bawah Layar Tanja
+      for (const sparOffset of [-m.sailH * 0.46, m.sailH * 0.46]) {
+        const spar = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, m.sailW + 0.6, 6), this.matWoodDark);
+        spar.rotation.x = Math.PI / 2;
+        spar.rotation.z = -0.12;
+        spar.position.set(m.x + 0.3, m.h * 0.5 + 4.2 + sparOffset, 0);
+        ship.add(spar);
+      }
 
       // Layar Tanja Anyaman Tradisional
       const sail = new THREE.Mesh(new THREE.PlaneGeometry(m.sailW, m.sailH), this.matSail);
@@ -662,6 +811,10 @@ export class ArchitectureSystem {
       gatePillar.castShadow = true;
       gatePillar.receiveShadow = true;
       kedaton.add(gatePillar);
+
+      const pilaster = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.55, 7.6, 8), this.matGold);
+      pilaster.position.set(side * 4.45, 3.8, 43.9);
+      kedaton.add(pilaster);
     }
 
     // Ambang Atas & Atap Paduraksa Gerbang Selatan (Tinggi di atas kepala pemain agar bebas lewat)
@@ -670,9 +823,15 @@ export class ArchitectureSystem {
     gateLintel.castShadow = true;
     kedaton.add(gateLintel);
 
-    const gateRoofTop = new THREE.Mesh(new THREE.BoxGeometry(13.5, 1.8, 3.8), this.matBrickDark);
-    gateRoofTop.position.set(0, 10.8, 42);
+    const gateRoofTop = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 8.6, 3.2, 4), this.matBrickDark);
+    gateRoofTop.position.set(0, 11.4, 42);
+    gateRoofTop.rotation.y = Math.PI / 4;
+    gateRoofTop.scale.set(1.45, 1.0, 0.45);
     kedaton.add(gateRoofTop);
+
+    const gateFinial = new THREE.Mesh(new THREE.OctahedronGeometry(0.75, 0), this.matGold);
+    gateFinial.position.set(0, 13.4, 42);
+    kedaton.add(gateFinial);
 
     const gateArchTrim = new THREE.Mesh(new THREE.BoxGeometry(18.4, 0.7, 4.9), this.matGold);
     gateArchTrim.position.set(0, 7.6, 42);
@@ -752,10 +911,21 @@ export class ArchitectureSystem {
     backRest.position.set(0, 1.8, -1.2);
     throneGroup.add(backRest);
 
-    // Lambang Surya Majapahit Emas Bercahaya
-    const sunEmblem = new THREE.Mesh(new THREE.OctahedronGeometry(0.85, 0), this.matGold);
+    // Lambang Cakra Surya Majapahit Emas Bercahaya di belakang Singgasana
+    const sunRing = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.14, 8, 16), this.matGold);
+    sunRing.position.set(0, 2.4, -0.95);
+    throneGroup.add(sunRing);
+
+    const sunEmblem = new THREE.Mesh(new THREE.OctahedronGeometry(0.78, 0), this.matGold);
     sunEmblem.position.set(0, 2.4, -0.9);
     throneGroup.add(sunEmblem);
+
+    // Sandaran tangan singgasana berukir
+    for (const side of [-1.45, 1.45]) {
+      const armRest = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 1.35, 8), this.matGold);
+      armRest.position.set(side, 1.25, -0.2);
+      throneGroup.add(armRest);
+    }
 
     const throneLight = new THREE.PointLight('#ffd269', 1.8, 18, 1.5);
     throneLight.position.set(0, 2.5, 0);

@@ -161,30 +161,33 @@ export class NPCSystem {
 
   // 1. Mahapatih Gajah Mada (Zirah Perunggu Emas, Udeng Perwira)
   createGajahMadaMesh(parent) {
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.85, 1.05, 0.48), this.matGajahMadaArmor);
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.46, 1.05, 8), this.matGajahMadaArmor);
     torso.position.y = 1.35;
+    torso.scale.set(1.1, 1.0, 0.68);
     torso.castShadow = true;
     parent.add(torso);
 
-    const goldBreastplate = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.65, 0.52), this.matGold);
+    const goldBreastplate = new THREE.Mesh(new THREE.CylinderGeometry(0.41, 0.43, 0.56, 8), this.matGold);
     goldBreastplate.position.y = 1.48;
+    goldBreastplate.scale.set(1.12, 1.0, 0.72);
     parent.add(goldBreastplate);
 
-    const legs = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.85, 0.35), this.matGajahMadaArmor);
+    const legs = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.38, 0.88, 8), this.matGajahMadaArmor);
     legs.position.y = 0.45;
+    legs.scale.set(1.05, 1.0, 0.65);
     parent.add(legs);
 
     const headGroup = new THREE.Group();
     headGroup.position.set(0, 2.15, 0);
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.52, 0.5), this.matSkin);
+    const head = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.5, 10), this.matSkin);
     headGroup.add(head);
 
-    const udeng = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.22, 0.58), this.matGajahMadaArmor);
+    const udeng = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.3, 0.22, 10), this.matGajahMadaArmor);
     udeng.position.y = 0.2;
     headGroup.add(udeng);
 
-    const goldCrest = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.35, 4), this.matGold);
-    goldCrest.position.set(0, 0.38, -0.15);
+    const goldCrest = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.35, 6), this.matGold);
+    goldCrest.position.set(0, 0.38, -0.14);
     headGroup.add(goldCrest);
 
     parent.add(headGroup);
@@ -193,21 +196,23 @@ export class NPCSystem {
 
   // 2. Prabu Hayam Wuruk (Mahkota Kencana Bertatah Emas)
   createHayamWurukMesh(parent) {
-    const robe = new THREE.Mesh(new THREE.BoxGeometry(0.88, 1.3, 0.55), this.matGold);
-    robe.position.y = 1.35;
+    const robe = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.52, 1.38, 10), this.matGold);
+    robe.position.y = 1.25;
+    robe.scale.set(1.1, 1.0, 0.74);
     parent.add(robe);
 
-    const sash = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.2, 0.58), this.matGajahMadaArmor);
+    const sash = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.44, 0.2, 10), this.matGajahMadaArmor);
     sash.position.y = 1.05;
+    sash.scale.set(1.1, 1.0, 0.76);
     parent.add(sash);
 
     const headGroup = new THREE.Group();
     headGroup.position.set(0, 2.25, 0);
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.48), this.matSkin);
+    const head = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.48, 10), this.matSkin);
     headGroup.add(head);
 
     // Mahkota Bertingkat Emas (Makuta Majapahit)
-    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.34, 0.55, 8), this.matGold);
+    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.33, 0.55, 8), this.matGold);
     crown.position.y = 0.45;
     headGroup.add(crown);
 
@@ -217,8 +222,9 @@ export class NPCSystem {
 
   // 3. Mpu Prapanca (Jubah Putih Sastrawan, Naskah Lontar)
   createMpuPrapancaMesh(parent) {
-    const robe = new THREE.Mesh(new THREE.BoxGeometry(0.78, 1.25, 0.45), this.matPrapancaRobe);
-    robe.position.y = 1.25;
+    const robe = new THREE.Mesh(new THREE.CylinderGeometry(0.33, 0.48, 1.32, 10), this.matPrapancaRobe);
+    robe.position.y = 1.18;
+    robe.scale.set(1.08, 1.0, 0.72);
     parent.add(robe);
 
     // Lontar di Tangan
@@ -229,10 +235,10 @@ export class NPCSystem {
 
     const headGroup = new THREE.Group();
     headGroup.position.set(0, 2.1, 0);
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.48, 0.48), this.matSkin);
+    const head = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.23, 0.46, 10), this.matSkin);
     headGroup.add(head);
 
-    const turban = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.18, 0.54), this.matPrapancaRobe);
+    const turban = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.28, 0.2, 10), this.matPrapancaRobe);
     turban.position.y = 0.22;
     headGroup.add(turban);
 
@@ -242,13 +248,14 @@ export class NPCSystem {
 
   // 4. Ki Tumenggung Arya Pedagang (Topi Caping Bambu Anyaman)
   createPedagangMesh(parent) {
-    const shirt = new THREE.Mesh(new THREE.BoxGeometry(0.76, 1.15, 0.45), this.matPedagangCloth);
-    shirt.position.y = 1.2;
+    const shirt = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.44, 1.22, 8), this.matPedagangCloth);
+    shirt.position.y = 1.15;
+    shirt.scale.set(1.06, 1.0, 0.72);
     parent.add(shirt);
 
     const headGroup = new THREE.Group();
     headGroup.position.set(0, 2.05, 0);
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.48, 0.48), this.matSkin);
+    const head = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.23, 0.46, 10), this.matSkin);
     headGroup.add(head);
 
     // Topi Caping Bambu Khas Petani / Pedagang
@@ -262,8 +269,9 @@ export class NPCSystem {
 
   // 5. Prajurit Pengawal Brantas (Helm Tembaga, Tombak)
   createPrajuritMesh(parent) {
-    const armor = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.15, 0.46), this.matPrajuritArmor);
-    armor.position.y = 1.25;
+    const armor = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.44, 1.22, 8), this.matPrajuritArmor);
+    armor.position.y = 1.2;
+    armor.scale.set(1.08, 1.0, 0.72);
     parent.add(armor);
 
     // Tombak Panjang
@@ -277,10 +285,10 @@ export class NPCSystem {
 
     const headGroup = new THREE.Group();
     headGroup.position.set(0, 2.1, 0);
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.48, 0.48), this.matSkin);
+    const head = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.23, 0.46, 10), this.matSkin);
     headGroup.add(head);
 
-    const helmet = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.24, 0.54), this.matBronze);
+    const helmet = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.29, 0.24, 10), this.matBronze);
     helmet.position.y = 0.22;
     headGroup.add(helmet);
 

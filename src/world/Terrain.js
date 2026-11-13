@@ -349,9 +349,34 @@ export class TerrainSystem {
       wg.translate(w.x, 1.1, w.z);
       brickGeos.push(wg);
 
-      const cg = new THREE.BoxGeometry(w.w + 0.3, 0.35, w.d + 0.3);
-      cg.translate(w.x, 2.55, w.z);
+      // Undakan kaki pondasi dinding bata (Plinth Footer)
+      const baseFoot = new THREE.BoxGeometry(w.w + 0.55, 0.55, w.d + 0.55);
+      baseFoot.translate(w.x, -0.02, w.z);
+      brickGeos.push(baseFoot);
+
+      // Lis tengah dinding bata agar tidak datar polos
+      const midBand = new THREE.BoxGeometry(w.w + 0.18, 0.28, w.d + 0.18);
+      midBand.translate(w.x, 1.55, w.z);
+      capGeos.push(midBand);
+
+      const cg = new THREE.BoxGeometry(w.w + 0.35, 0.34, w.d + 0.35);
+      cg.translate(w.x, 2.58, w.z);
       capGeos.push(cg);
+
+      // Penopang pilaster ritmis di sepanjang dinding panjang
+      const span = Math.max(w.w, w.d);
+      if (span >= 12) {
+        const isX = w.w >= w.d;
+        const count = Math.floor(span / 8);
+        for (let b = 1; b < count; b++) {
+          const frac = (b / count - 0.5) * span;
+          const bx = isX ? w.x + frac : w.x;
+          const bz = isX ? w.z : w.z + frac;
+          const pilaster = new THREE.BoxGeometry(isX ? 0.9 : w.d + 0.45, 2.75, isX ? w.d + 0.45 : 0.9);
+          pilaster.translate(bx, 1.15, bz);
+          brickGeos.push(pilaster);
+        }
+      }
     }
 
     // Undakan Tangga Bata Merah Kolam Segaran (Sisi Timur & Sisi Selatan)
@@ -365,26 +390,46 @@ export class TerrainSystem {
       capGeos.push(sg);
     }
 
-    // Pilar Pengapit Tangga Kolam Segaran
+    // Helper untuk membuat Pilar Candi Kolam Segaran bertingkat (bukan kotak polos)
+    const addSteppedPillar = (px, pz, width, height) => {
+      const plinth = new THREE.BoxGeometry(width + 0.55, 0.7, width + 0.55);
+      plinth.translate(px, 0.15, pz);
+      brickGeos.push(plinth);
+
+      const shaft = new THREE.BoxGeometry(width, height - 1.1, width);
+      shaft.translate(px, (height - 1.1) * 0.5 + 0.35, pz);
+      brickGeos.push(shaft);
+
+      const cornice = new THREE.BoxGeometry(width + 0.4, 0.35, width + 0.4);
+      cornice.translate(px, height - 0.55, pz);
+      capGeos.push(cornice);
+
+      const pyramidStep = new THREE.CylinderGeometry(width * 0.24, width * 0.48, 0.7, 4);
+      pyramidStep.rotateY(Math.PI / 4);
+      pyramidStep.translate(px, height - 0.05, pz);
+      capGeos.push(pyramidStep);
+
+      const finial = new THREE.OctahedronGeometry(width * 0.17, 0);
+      finial.translate(px, height + 0.45, pz);
+      capGeos.push(finial);
+    };
+
+    // Pilar Pengapit Tangga Kolam Segaran (Berundak + Kemuncak)
     const stairPillars = [
       [-34.5, 1.0], [-34.5, 9.0],
       [-56.0, 31.5], [-48.0, 31.5]
     ];
     for (const [px, pz] of stairPillars) {
-      const spg = new THREE.BoxGeometry(2.6, 3.6, 2.6);
-      spg.translate(px, 1.6, pz);
-      brickGeos.push(spg);
+      addSteppedPillar(px, pz, 2.5, 3.6);
     }
 
-    // Corner Majapahit Terracotta Pillars
+    // Corner Majapahit Terracotta Towers (Menara Sudut Kolam Bertingkat)
     const corners = [
       [-69.5, -21.5], [-34.5, -21.5],
       [-69.5, 31.5], [-34.5, 31.5]
     ];
     for (const [cx, cz] of corners) {
-      const pg = new THREE.BoxGeometry(3.2, 4.2, 3.2);
-      pg.translate(cx, 1.9, cz);
-      brickGeos.push(pg);
+      addSteppedPillar(cx, cz, 3.1, 4.3);
     }
 
     const mergedBricks = mergeGeometries(brickGeos);
@@ -447,17 +492,33 @@ export class TerrainSystem {
         pg.translate(centerX, y0 - 0.15, z0);
         woodGeos.push(pg);
 
-        // Side posts every 3 planks
+        // Side posts & bridge guardrails every 3 planks
         if (i % 3 === 0 || i === steps - 1) {
           for (const side of [-1, 1]) {
-            const postGeo = new THREE.BoxGeometry(0.45, 2.4, 0.45);
-            postGeo.translate(centerX + side * (width * 0.5 - 0.3), y0 + 0.8, z0);
+            const postX = centerX + side * (width * 0.5 - 0.3);
             if (i === 0 || i === steps - 1) {
+              const postGeo = new THREE.BoxGeometry(0.62, 2.5, 0.62);
+              postGeo.translate(postX, y0 + 0.9, z0);
               brickGeos.push(postGeo);
+
+              const capGeo = new THREE.CylinderGeometry(0.16, 0.42, 0.55, 4);
+              capGeo.rotateY(Math.PI / 4);
+              capGeo.translate(postX, y0 + 2.4, z0);
+              brickGeos.push(capGeo);
             } else {
+              const postGeo = new THREE.CylinderGeometry(0.18, 0.22, 2.1, 6);
+              postGeo.translate(postX, y0 + 0.7, z0);
               darkWoodGeos.push(postGeo);
             }
           }
+        }
+
+        // Susur Pagar Kayu Jembatan Penghubung Antar Tiang
+        for (const side of [-1, 1]) {
+          const railX = centerX + side * (width * 0.5 - 0.3);
+          const railTop = new THREE.BoxGeometry(0.18, 0.18, segLen + 0.08);
+          railTop.translate(railX, y0 + 1.35, z0);
+          darkWoodGeos.push(railTop);
         }
       }
 
@@ -477,12 +538,15 @@ export class TerrainSystem {
     pierDeckGeo.translate(-124.5, 1.65, 19);
     woodGeos.push(pierDeckGeo);
 
-    for (let px = -133; px <= -116; px += 5.5) {
-      for (const pz of [13, 25]) {
-        const postGeo = new THREE.CylinderGeometry(0.4, 0.45, 5.2, 8);
-        postGeo.translate(px, 0.6, pz);
-        darkWoodGeos.push(postGeo);
-      }
+    for (const px of [-133, -127.5, -122, -116.5]) {
+      const postGeo = new THREE.CylinderGeometry(0.38, 0.44, 5.2, 8);
+      postGeo.translate(px, 0.6, 13);
+      darkWoodGeos.push(postGeo);
+    }
+    for (const px of [-133, -128.2, -122.8, -116.5]) {
+      const postGeo = new THREE.CylinderGeometry(0.38, 0.44, 5.2, 8);
+      postGeo.translate(px, 0.6, 25);
+      darkWoodGeos.push(postGeo);
     }
 
     // Stepping stones across Sungai Brantas

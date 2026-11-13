@@ -197,8 +197,22 @@ export class MinimapAndHUD {
     this.staticMapCanvas.height = h;
     const sCtx = this.staticMapCanvas.getContext('2d');
 
-    sCtx.fillStyle = '#233820';
+    // Latar kartografi radarmap bertekstur radial zamrud gelap
+    const bgGrad = sCtx.createRadialGradient(w * 0.5, h * 0.5, w * 0.1, w * 0.5, h * 0.5, w * 0.52);
+    bgGrad.addColorStop(0, '#2a4224');
+    bgGrad.addColorStop(0.7, '#1d2f1a');
+    bgGrad.addColorStop(1, '#121d11');
+    sCtx.fillStyle = bgGrad;
     sCtx.fillRect(0, 0, w, h);
+
+    // Lingkaran cincin radar konsentris halus
+    sCtx.strokeStyle = 'rgba(229, 184, 66, 0.12)';
+    sCtx.lineWidth = 1;
+    for (const rFrac of [0.28, 0.45]) {
+      sCtx.beginPath();
+      sCtx.arc(w * 0.5, h * 0.5, w * rFrac, 0, Math.PI * 2);
+      sCtx.stroke();
+    }
 
     // Zona-zona
     for (const z of ZONES) {
@@ -1303,6 +1317,14 @@ export class MinimapAndHUD {
     ctx.stroke();
 
     ctx.restore();
+
+    // 6. Cincin bayangan vignette radar melingkar & arah kompas U (Utara)
+    const rimGrad = ctx.createRadialGradient(w * 0.5, h * 0.5, w * 0.36, w * 0.5, h * 0.5, w * 0.51);
+    rimGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    rimGrad.addColorStop(0.75, 'rgba(10, 6, 4, 0.18)');
+    rimGrad.addColorStop(1, 'rgba(10, 6, 4, 0.62)');
+    ctx.fillStyle = rimGrad;
+    ctx.fillRect(0, 0, w, h);
   }
 
   // Render Fullscreen Interactive Atlas (Resolusi 620x620)
