@@ -570,6 +570,7 @@ export class MinimapAndHUD {
 
     window.addEventListener('keydown', (e) => {
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+      if (document.body.classList.contains('prologue-lab-active')) return;
 
       if (e.code === 'KeyM') {
         gameState.toggleModal(ModalTypes.ATLAS);

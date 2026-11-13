@@ -59,6 +59,10 @@ export class ExplorerController {
     this.cinematicTimer = 0;
     this.cinematicCenter = new THREE.Vector3();
 
+    // Prolog Lab Ruang-Waktu Mode
+    this.isLabMode = false;
+    this.labPrologue = null;
+
     // Pre-allocated scratch vectors (Zero GC allocation per frame)
     this._forward = new THREE.Vector3();
     this._right = new THREE.Vector3();
@@ -92,16 +96,19 @@ export class ExplorerController {
         this.audio.playFootstep(surface);
       }
 
-      // Munculkan efek partikel sesuai pijakan
-      if (this.isWater) {
-        this.particles.spawnWaterRipple(this.position, 0.26);
-      } else if (this.keys.sprint && this.isGrounded) {
-        this.particles.spawnDust(this.position);
+      // Munculkan efek partikel sesuai pijakan (hanya di dunia Majapahit)
+      if (!this.isLabMode) {
+        if (this.isWater) {
+          this.particles.spawnWaterRipple(this.position, 0.26);
+        } else if (this.keys.sprint && this.isGrounded) {
+          this.particles.spawnDust(this.position);
+        }
       }
     });
   }
 
   getCurrentSurfaceType() {
+    if (this.isLabMode) return 'stone';
     if (this.isWater) return 'water';
 
     // Cek apakah di atas jembatan kayu atau dermaga
@@ -165,7 +172,7 @@ export class ExplorerController {
           this.handleInteraction();
           break;
         case 'KeyF':
-          this.toggleLenteraWaktu();
+          if (!this.isLabMode) this.toggleLenteraWaktu();
           break;
       }
     });
@@ -238,7 +245,7 @@ export class ExplorerController {
   }
 
   handleInteraction() {
-    if (this.isCinematicSync) return;
+    if (this.isCinematicSync || this.isLabMode) return;
 
     const now = performance.now();
     if (now - this.lastInteractionTime < 220) return;
@@ -321,7 +328,60 @@ export class ExplorerController {
     this.mouseSensitivity = THREE.MathUtils.clamp(multiplier, 0.25, 2.5);
   }
 
+  enterLabMode(labPrologue) {
+    this.labPrologue = labPrologue;
+    this.isLabMode = true;
+    this.position.copy(labPrologue.spawnPos);
+    this.verticalVelocity = 0;
+    this.isGrounded = true;
+    this.isWater = false;
+    this.yaw = 0;
+    this.pitch = 0.24;
+    this.cameraDistance = 7.8;
+    this.targetCameraDistance = 7.8;
+
+    this.characterRig.group.rotation.set(0, 0, 0);
+    this.characterRig.group.scale.setScalar(1.0);
+    this.characterRig.group.position.copy(this.position);
+    labPrologue.scene.add(this.characterRig.group);
+  }
+
+  exitLabModeAndArrive() {
+    this.isLabMode = false;
+    this.keys.forward = false;
+    this.keys.backward = false;
+    this.keys.left = false;
+    this.keys.right = false;
+    this.keys.sprint = false;
+    const landingGround = getWalkableHeight(0, 142);
+    this.position.set(0, landingGround + 4.8, 142);
+    this.verticalVelocity = -2.2;
+    this.isGrounded = false;
+    this.isWater = false;
+
+    this.yaw = 0;
+    this.pitch = 0.32;
+    this.cameraDistance = 10.5;
+    this.targetCameraDistance = 10.5;
+    this.camera.fov = 60;
+    this.camera.updateProjectionMatrix();
+
+    this.characterRig.group.rotation.set(0, 0, 0);
+    this.characterRig.group.scale.setScalar(1.0);
+    this.characterRig.group.position.copy(this.position);
+    this.scene.add(this.characterRig.group);
+
+    this.camera.position.set(0, landingGround + 7.2, 153);
+    this.camera.lookAt(0, landingGround + 1.8, 142);
+
+    const splashOrigin = new THREE.Vector3(0, landingGround + 0.15, 142);
+    this.particles.spawnDust(splashOrigin);
+  }
+
   canMoveTo(targetX, targetZ, currentY) {
+    if (this.isLabMode && this.labPrologue) {
+      return this.labPrologue.canMoveTo(targetX, targetZ);
+    }
     if (Math.abs(targetX) > 185 || Math.abs(targetZ) > 185) return false;
 
     const currentWalkY = Math.max(getWalkableHeight(this.position.x, this.position.z), currentY);
@@ -418,9 +478,9 @@ export class ExplorerController {
     const canMove = gameState.canPlayerMove() && !this.isCinematicSync;
     const isMoving = canMove && moveDir.lengthSq() > 0.001;
 
-    // Cek apakah sedang berada di dalam air
-    const terrainOnlyY = getTerrainHeight(this.position.x, this.position.z);
-    this.isWater = terrainOnlyY < 0.22 && this.position.y <= 0.35;
+    // Cek apakah sedang berada di dalam air (hanya di dunia Majapahit)
+    const terrainOnlyY = this.isLabMode ? 2.0 : getTerrainHeight(this.position.x, this.position.z);
+    this.isWater = !this.isLabMode && terrainOnlyY < 0.22 && this.position.y <= 0.35;
 
     // Kecepatan adaptif (dukung Sprint fisik tombol keyboard & tombol Sprint mobile)
     let speed = this.baseSpeed;
@@ -469,7 +529,9 @@ export class ExplorerController {
     }
 
     // 2. Gravitasi & Pendaratan
-    const groundY = Math.max(-0.4, getWalkableHeight(this.position.x, this.position.z));
+    const groundY = (this.isLabMode && this.labPrologue)
+      ? this.labPrologue.getWalkableHeight(this.position.x, this.position.z)
+      : Math.max(-0.4, getWalkableHeight(this.position.x, this.position.z));
     this.verticalVelocity -= this.gravity * dt;
     this.position.y += this.verticalVelocity * dt;
 
@@ -503,28 +565,36 @@ export class ExplorerController {
     // 4. Update Partikel
     this.particles.update(dt);
 
-    // 5. Cek Kedekatan dengan NPC, Peti Artefak & Viewpoint
-    let interactive = this.npcSystem ? this.npcSystem.checkProximity(this.position) : null;
-    if (!interactive && this.exploration) {
-      interactive = this.exploration.checkProximity(this.position);
-    }
-    this.nearInteractive = interactive;
-
-    // Cek Kedekatan dengan Titik Sejarah (Landmark) via Spatial Grid O(1)
-    let foundNearby = null;
-    const nearbyLandmarks = spatialGrid.queryLandmarks(this.position.x, this.position.z, 24);
-    for (let i = 0; i < nearbyLandmarks.length; i++) {
-      const lm = nearbyLandmarks[i];
-      const d = Math.hypot(this.position.x - lm.position.x, this.position.z - lm.position.z);
-      if (d <= lm.radius) {
-        foundNearby = lm;
-        break;
+    // 5. Cek Kedekatan dengan NPC, Peti Artefak & Viewpoint (dilewati saat masih di Lab Prolog)
+    if (this.isLabMode) {
+      this.nearInteractive = null;
+      this.nearLandmark = null;
+      if (this.touchControls) {
+        this.touchControls.updateInteractButton(null);
       }
-    }
-    this.nearLandmark = foundNearby;
+    } else {
+      let interactive = this.npcSystem ? this.npcSystem.checkProximity(this.position) : null;
+      if (!interactive && this.exploration) {
+        interactive = this.exploration.checkProximity(this.position);
+      }
+      this.nearInteractive = interactive;
 
-    if (this.touchControls) {
-      this.touchControls.updateInteractButton(this.nearInteractive || this.nearLandmark);
+      // Cek Kedekatan dengan Titik Sejarah (Landmark) via Spatial Grid O(1)
+      let foundNearby = null;
+      const nearbyLandmarks = spatialGrid.queryLandmarks(this.position.x, this.position.z, 24);
+      for (let i = 0; i < nearbyLandmarks.length; i++) {
+        const lm = nearbyLandmarks[i];
+        const d = Math.hypot(this.position.x - lm.position.x, this.position.z - lm.position.z);
+        if (d <= lm.radius) {
+          foundNearby = lm;
+          break;
+        }
+      }
+      this.nearLandmark = foundNearby;
+
+      if (this.touchControls) {
+        this.touchControls.updateInteractButton(this.nearInteractive || this.nearLandmark);
+      }
     }
 
     // 6. Update Kamera 360° yang Halus (atau Mode Cinematic Sinkronisasi Viewpoint)
@@ -544,19 +614,25 @@ export class ExplorerController {
       this.camera.lookAt(this.cinematicCenter.x, this.cinematicCenter.y + 2.0, this.cinematicCenter.z);
     } else {
       this.cameraDistance = THREE.MathUtils.lerp(this.cameraDistance, this.targetCameraDistance, dt * 8);
-      const activeDist = this.isEagleMode ? 65 : this.cameraDistance;
-      const activePitch = this.isEagleMode ? 0.82 : this.pitch;
+      const activeDist = this.isLabMode ? Math.min(this.cameraDistance, 11.5) : (this.isEagleMode ? 65 : this.cameraDistance);
+      const activePitch = this.isLabMode ? THREE.MathUtils.clamp(this.pitch, 0.08, 0.58) : (this.isEagleMode ? 0.82 : this.pitch);
 
       const cosPitch = Math.cos(activePitch);
       const camOffset = this._camOffset.set(
         Math.sin(this.yaw) * cosPitch * activeDist,
-        Math.sin(activePitch) * activeDist + 2.2,
+        Math.sin(activePitch) * activeDist + (this.isLabMode ? 1.85 : 2.2),
         Math.cos(this.yaw) * cosPitch * activeDist
       );
 
       const targetCamPos = this._targetCamPos.copy(this.position).add(camOffset);
-      const camGroundY = getWalkableHeight(targetCamPos.x, targetCamPos.z) + 1.2;
-      if (targetCamPos.y < camGroundY) targetCamPos.y = camGroundY;
+      if (this.isLabMode) {
+        targetCamPos.x = THREE.MathUtils.clamp(targetCamPos.x, -10.5, 10.5);
+        targetCamPos.z = THREE.MathUtils.clamp(targetCamPos.z, -12.2, 12.4);
+        targetCamPos.y = THREE.MathUtils.clamp(targetCamPos.y, 0.9, 8.0);
+      } else {
+        const camGroundY = getWalkableHeight(targetCamPos.x, targetCamPos.z) + 1.2;
+        if (targetCamPos.y < camGroundY) targetCamPos.y = camGroundY;
+      }
 
       this.camera.position.lerp(targetCamPos, Math.min(1, dt * 12));
       this.camera.lookAt(this.position.x, this.position.y + 1.8, this.position.z);

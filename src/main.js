@@ -13,9 +13,10 @@ import { NPCSystem } from './npc/NPCSystem.js';
 import { QuestSystem } from './quests/QuestSystem.js';
 import { JournalSystem } from './journal/JournalSystem.js';
 import { QuizSystem } from './quiz/QuizSystem.js';
-import { ExplorerController } from './player/ExplorerController.js';
-import { MinimapAndHUD } from './ui/MinimapAndHUD.js';
-import { AudioSystem } from './audio/AudioSystem.js';
+import { ExplorerController } from './player/ExplorerController.js?v=2.2';
+import { MinimapAndHUD } from './ui/MinimapAndHUD.js?v=2.2';
+import { AudioSystem } from './audio/AudioSystem.js?v=2.2';
+import { TimeLabPrologue } from './prologue/TimeLabPrologue.js?v=2.2';
 
 class MajapahitWorldApp {
   constructor() {
@@ -106,8 +107,36 @@ class MajapahitWorldApp {
       this.npcSystem
     );
 
+    // 10.5. Prolog Laboratorium & Portal Ruang-Waktu (Tahap Awal Game)
+    this.labPrologue = new TimeLabPrologue(this.isMobile);
+    this.explorer.enterLabMode(this.labPrologue);
+    document.body.classList.add('prologue-lab-active');
+
     // 11. Minimap, Compass, Zone Detector, Fog of War & Quest HUD
     this.hud = new MinimapAndHUD(this.audio, this.exploration, this.questSystem);
+  }
+
+  completeArrivalToMajapahit() {
+    if (!this.labPrologue || this.labPrologue.phase === 'MAJAPAHIT') return;
+
+    this.labPrologue.finishPrologue();
+    this.explorer.exitLabModeAndArrive();
+    gameState.setCinematic(false);
+
+    document.body.classList.remove('prologue-lab-active');
+    document.body.classList.remove('cinematic-warp-active');
+
+    const ttOverlay = document.getElementById('timetravel-overlay');
+    const ttFlash = document.getElementById('timetravel-flash');
+    if (ttOverlay) ttOverlay.classList.add('hidden');
+    if (ttFlash) {
+      ttFlash.classList.add('flash-burst');
+      setTimeout(() => ttFlash.classList.remove('flash-burst'), 1050);
+    }
+
+    this.audio.playPortalArrival();
+    this.audio.startGamelanAmbient();
+    this.audio.initSpatialAmbience();
   }
 
   initUIBindings() {
@@ -138,16 +167,26 @@ class MajapahitWorldApp {
 
     btnStart.addEventListener('click', () => {
       this.audio.ensureContext();
-      this.audio.startGamelanAmbient();
-      this.audio.initSpatialAmbience();
+      this.audio.playLabBootChime();
       introOverlay.classList.add('hidden');
       hudOverlay.classList.remove('hud-hidden');
+      if (this.labPrologue && this.labPrologue.phase === 'INTRO') {
+        this.labPrologue.startLab();
+      }
       gameState.setGameStart();
 
       if (window.innerWidth <= 1024 || 'ontouchstart' in window) {
         requestLandscapeAndFullscreen();
       }
     });
+
+    const btnSkipWarp = document.getElementById('btn-skip-warp');
+    if (btnSkipWarp) {
+      btnSkipWarp.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.completeArrivalToMajapahit();
+      });
+    }
 
     // Buka Ujian Kuis Gerbang Palapa (via Menu atau Event)
     window.addEventListener('majapahit:open-quiz', () => {
@@ -229,6 +268,7 @@ class MajapahitWorldApp {
     // Keyboard shortcuts for Time (T), Eagle Camera (V), and Single-Modal Guard (J / K)
     window.addEventListener('keydown', (e) => {
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+      if (document.body.classList.contains('prologue-lab-active')) return;
       if (e.code === 'KeyT') {
         const nextPreset = this.sky.cyclePreset();
         applyPresetUI(nextPreset);
@@ -248,6 +288,74 @@ class MajapahitWorldApp {
 
     const dt = Math.min(this.clock.getDelta(), 0.05);
     const elapsedTime = this.clock.getElapsedTime();
+
+    // Tahap Prolog: Render Adegan Laboratorium & Portal Ruang-Waktu secara terisolasi & super mulus
+    if (this.labPrologue && this.labPrologue.phase !== 'MAJAPAHIT') {
+      const pPhase = this.labPrologue.phase;
+
+      if (pPhase === 'LAB') {
+        this.explorer.update(dt, elapsedTime);
+        const distEl = document.getElementById('lab-portal-dist');
+        if (distEl) {
+          const d = Math.max(0, Math.round(Math.hypot(this.explorer.position.x, this.explorer.position.z - (-8.5)) - 3));
+          distEl.textContent = d <= 1 ? 'MASUK!' : `${d}m`;
+        }
+
+        if (this.labPrologue.isNearPortalTrigger(this.explorer.position)) {
+          this.labPrologue.startSuction(
+            this.explorer.position,
+            this.explorer.characterRig.group.rotation.y
+          );
+          gameState.setCinematic(true);
+          if (this.explorer.touchControls) {
+            this.explorer.touchControls.resetJoystick();
+          }
+          document.body.classList.add('cinematic-warp-active');
+
+          const ttOverlay = document.getElementById('timetravel-overlay');
+          const ttStatus = document.getElementById('timetravel-status');
+          const ttYear = document.getElementById('timetravel-year');
+          if (ttOverlay) ttOverlay.classList.remove('hidden');
+          if (ttYear) ttYear.textContent = '2026 M';
+          if (ttStatus) ttStatus.textContent = 'MEDAN GRAVITASI PORTAL AKTIF • TERHISAP...';
+          this.audio.playPortalSuction();
+        }
+      }
+
+      const warpResult = this.labPrologue.update(
+        dt,
+        elapsedTime,
+        this.camera,
+        this.explorer.characterRig,
+        this.explorer.position
+      );
+
+      if (warpResult === 'ENTER_WORMHOLE') {
+        this.audio.playWormholeWarp();
+        const ttStatus = document.getElementById('timetravel-status');
+        if (ttStatus) ttStatus.textContent = 'MENEMBUS LORONG RUANG & WAKTU NUSANTARA...';
+      } else if (warpResult && warpResult.event === 'WORMHOLE_PROGRESS') {
+        const p = warpResult.progress;
+        const yr = Math.round(2026 - Math.pow(p, 0.72) * (2026 - 1350));
+        const ttYear = document.getElementById('timetravel-year');
+        const ttStatus = document.getElementById('timetravel-status');
+        if (ttYear) ttYear.textContent = `${yr} M`;
+        if (ttStatus) {
+          if (p > 0.76) {
+            ttStatus.textContent = 'KOORDINAT TERKUNCI • KERAJAAN MAJAPAHIT (1350 M)';
+          } else if (p > 0.4) {
+            ttStatus.textContent = 'MELINTASI GELOMBANG MASA NUSANTARA...';
+          }
+        }
+      } else if (warpResult === 'ARRIVE_MAJAPAHIT') {
+        this.completeArrivalToMajapahit();
+        this.renderer.render(this.scene, this.camera);
+        return;
+      }
+
+      this.renderer.render(this.labPrologue.scene, this.camera);
+      return;
+    }
 
     this.journalSystem.update(dt);
 

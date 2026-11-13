@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./src/style.css" />
+  <link rel="stylesheet" href="./src/style.css?v=2.2" />
   <script type="importmap">
     {
       "imports": {
@@ -75,19 +75,18 @@
         </svg>
         <span class="surya-core-icon">☀️</span>
       </div>
-      <div class="badge-era">MATERI SEJARAH SMP KELAS VII • KURIKULUM MERDEKA</div>
+      <div class="badge-era">⚛️ PROLOG: LABORATORIUM KRONOS NUSANTARA (2026 M)</div>
       <h1 class="game-title">EKSPEDISI MAJAPAHIT</h1>
-      <h2 class="game-subtitle">Jejak Sang Mahapatih • Trowulan 1350 M</h2>
+      <h2 class="game-subtitle">Gerbang Ruang & Waktu • Menuju Trowulan 1350 M</h2>
       <p class="intro-desc">
-        Selamat datang, <strong>Penjelajah Waktu</strong>! Kamu telah terlempar ke abad ke-14, tepat di masa keemasan Kerajaan Majapahit di bawah kepemimpinan <strong>Raja Hayam Wuruk</strong> dan <strong>Mahapatih Gajah Mada</strong>. Jelajahi bentang alam Hutan Tarik, Sungai Brantas, Kolam Segaran, hingga perbukitan Candi untuk mengungkap sejarah Nusantara!
+        Petualanganmu berawal di <strong>Laboratorium Kronos 2026 M</strong>. Karaktermu telah berdiri di depan <strong>Portal Ruang-Waktu</strong>. Klik tombol di bawah untuk mengendalikan karakter, lalu <strong>berjalanlah mendekat ke arah portal</strong> untuk terhisap menembus lorong waktu menuju Kerajaan Majapahit!
       </p>
 
       <div class="zones-preview">
-        <div class="intro-zone-tag"><span>🌿</span> 1. Hutan Tarik & Sungai Brantas</div>
-        <div class="intro-zone-tag"><span>🏺</span> 2. Pasar Kotaraja & Kolam Segaran</div>
-        <div class="intro-zone-tag"><span>🛕</span> 3. Lembah Candi & Sanggar Pujangga</div>
-        <div class="intro-zone-tag"><span>⛵</span> 4. Barak Bhayangkara & Dermaga Jung</div>
-        <div class="intro-zone-tag"><span>👑</span> 5. Kedaton Agung Istana Majapahit</div>
+        <div class="intro-zone-tag"><span>⚛️</span> 1. Laboratorium Kronos 2026 M</div>
+        <div class="intro-zone-tag"><span>🌀</span> 2. Portal Ruang & Waktu (Hisapan)</div>
+        <div class="intro-zone-tag"><span>🌌</span> 3. Terowongan Dimensi 2026 → 1350 M</div>
+        <div class="intro-zone-tag"><span>🌿</span> 4. Pendaratan di Hutan Tarik Trowulan</div>
       </div>
 
       <!-- Petunjuk Kontrol Khusus Layar Sentuh Mobile (Roblox Style) -->
@@ -109,13 +108,38 @@
       </div>
 
       <button id="btn-start-game" class="btn-primary">
-        <span>Mulai Eksplorasi Dunia 3D</span>
+        <span>🚀 Masuk Laboratorium & Mulai</span>
       </button>
     </div>
   </div>
 
   <!-- HUD Overlay (Active during gameplay) - Minimalist, Clear & Cinematic -->
   <div id="hud-overlay" class="hud-hidden">
+    <!-- Panduan Prolog Laboratorium Kronos (Tampil saat di dalam Lab sebelum masuk Portal) -->
+    <div id="prologue-lab-banner" class="prologue-lab-banner">
+      <div class="lab-banner-badge">⚛️ PROLOG • LABORATORIUM KRONOS NUSANTARA</div>
+      <div class="lab-banner-task">
+        Berjalan mendekatlah ke <strong>Portal Ruang-Waktu</strong> di depanmu
+        <span id="lab-portal-dist" class="lab-portal-dist">16m</span>
+      </div>
+    </div>
+
+    <!-- Overlay Animasi Terlempar Ruang & Waktu (Tampil saat SUCK & WORMHOLE) -->
+    <div id="timetravel-overlay" class="timetravel-overlay hidden">
+      <div class="timetravel-warp-rings" aria-hidden="true"></div>
+      <div class="timetravel-readout">
+        <div class="timetravel-tag">KRONOS JUMP • PROYEK WILWATIKTA</div>
+        <div id="timetravel-year" class="timetravel-year">2026 M</div>
+        <div id="timetravel-status" class="timetravel-status">MEDAN GRAVITASI PORTAL TERDETEKSI...</div>
+      </div>
+      <button id="btn-skip-warp" class="btn-skip-warp" title="Lewati animasi perjalanan waktu">
+        Lewati Animasi ⏭
+      </button>
+    </div>
+
+    <!-- Kilatan Cahaya Transisi Keluar Portal menuju Majapahit -->
+    <div id="timetravel-flash" class="timetravel-flash"></div>
+
     <!-- Top Bar Navigation (Sleek, Unobtrusive & Minimalist) -->
     <header class="hud-top-bar">
       <!-- Kiri: Pill Misi Aktif (Hanya Judul, Klik untuk Rincian) -->
@@ -614,6 +638,6 @@
     </div>
   </div>
 
-  <script type="module" src="./src/main.js"></script>
+  <script type="module" src="./src/main.js?v=2.2"></script>
 </body>
 </html>

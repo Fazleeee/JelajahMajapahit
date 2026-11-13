@@ -734,4 +734,132 @@ export class AudioSystem {
       osc.stop(now + 0.3);
     }
   }
+
+  // -------------------------------------------------------------
+  // EFEK AUDIO PROLOG LABORATORIUM & PORTAL RUANG-WAKTU
+  // -------------------------------------------------------------
+  playLabBootChime() {
+    if (this.isMuted) return;
+    this.ensureContext();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const notes = [440, 554.37, 659.25, 880];
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      const t0 = now + idx * 0.08;
+      osc.frequency.setValueAtTime(freq, t0);
+      gain.gain.setValueAtTime(0.001, t0);
+      gain.gain.linearRampToValueAtTime(0.11, t0 + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.55);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(t0);
+      osc.stop(t0 + 0.6);
+    });
+  }
+
+  playPortalSuction() {
+    if (this.isMuted) return;
+    this.ensureContext();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    // Gelombang hisapan energi kronos menaik dramatis
+    const osc = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const filter = this.ctx.createBiquadFilter();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(85, now);
+    osc.frequency.exponentialRampToValueAtTime(520, now + 1.35);
+
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(190, now);
+    osc2.frequency.exponentialRampToValueAtTime(980, now + 1.35);
+
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(240, now);
+    filter.frequency.exponentialRampToValueAtTime(2400, now + 1.35);
+    filter.Q.setValueAtTime(2.6, now);
+
+    gain.gain.setValueAtTime(0.01, now);
+    gain.gain.linearRampToValueAtTime(0.24, now + 0.85);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 1.55);
+
+    osc.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc2.start(now);
+    osc.stop(now + 1.6);
+    osc2.stop(now + 1.6);
+  }
+
+  playWormholeWarp() {
+    if (this.isMuted) return;
+    this.ensureContext();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const lfo = this.ctx.createOscillator();
+    const lfoGain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(140, now);
+    osc.frequency.linearRampToValueAtTime(210, now + 1.8);
+    osc.frequency.linearRampToValueAtTime(110, now + 3.6);
+
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(6.5, now);
+    lfoGain.gain.setValueAtTime(220, now);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(520, now);
+    lfo.connect(lfoGain);
+    lfoGain.connect(filter.frequency);
+
+    gain.gain.setValueAtTime(0.01, now);
+    gain.gain.linearRampToValueAtTime(0.18, now + 0.4);
+    gain.gain.linearRampToValueAtTime(0.14, now + 2.8);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 3.65);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    lfo.start(now);
+    osc.stop(now + 3.7);
+    lfo.stop(now + 3.7);
+  }
+
+  playPortalArrival() {
+    if (this.isMuted) return;
+    this.ensureContext();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    // Gong Keraton + Gemintang Pendaratan di Era Majapahit 1350 M
+    const chord = [130.81, 261.63, 392.0, 523.25, 659.25];
+    chord.forEach((f, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = idx < 2 ? 'triangle' : 'sine';
+      const t0 = now + idx * 0.05;
+      osc.frequency.setValueAtTime(f, t0);
+      gain.gain.setValueAtTime(0.2 / (idx * 0.4 + 1), t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 2.8);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(t0);
+      osc.stop(t0 + 2.9);
+    });
+  }
 }
