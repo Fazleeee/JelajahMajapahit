@@ -4,15 +4,8 @@ import { HISTORICAL_ARTIFACTS, VIEWPOINTS } from '../exploration/ExplorationSyst
 import { NPC_DATA } from '../quests/QuestData.js';
 import { gameState, GameStates, ModalTypes } from '../core/GameState.js';
 import { eventBus, GameEvents } from '../core/EventBus.js';
-
-// Pemetaan Fraksi & Gelar Tradisional Tokoh Sejarah Kotaraja Majapahit
-const NPC_FACTIONS = {
-  ki_pedagang: 'Syahbandar & Saudagar Rempah Kotaraja',
-  mpu_prapanca: 'Dharmadhyaksa ring Kasogatan & Pujangga Keraton',
-  gajah_mada: 'Komando Tertinggi Pasukan Elit Bhayangkara',
-  hayam_wuruk: 'Bhattara Saptaprabhu & Dinasti Rajasa',
-  prajurit_brantas: 'Garda Keamanan Perbatasan & Jembatan Brantas'
-};
+import { DialogueModal } from './DialogueModal.js';
+import { AtlasMap } from './AtlasMap.js';
 
 // Kutipan Naskah Kuno Primer untuk Kropak Lontar Sejarah
 const LORE_SOURCES_MAP = [
@@ -133,34 +126,17 @@ export class MinimapAndHUD {
     this.artLoreEl = document.getElementById('art-modal-lore');
     this.btnArtClose = document.getElementById('btn-art-close');
 
-    // Modal Dialog Tokoh Sejarah (RPG Dialogue Box)
-    this.dialogueModal = document.getElementById('dialogue-modal');
-    this.speakerIconEl = document.getElementById('speaker-icon');
-    this.speakerNameEl = document.getElementById('speaker-name');
-    this.speakerTitleEl = document.getElementById('speaker-title');
-    this.speakerFactionEl = document.getElementById('speaker-faction');
-    this.dialogueTextEl = document.getElementById('dialogue-text');
-    this.dialogueChoicesEl = document.getElementById('dialogue-choices');
-    this.btnDialogueClose = document.getElementById('btn-dialogue-close');
+    // Modul Dialog Tokoh Sejarah & Atlas Interaktif
+    this.dialogue = new DialogueModal(audioSystem, questSystem);
+    this.atlas = new AtlasMap(explorationSystem, questSystem, audioSystem);
 
     // Banner Sinematik Sinkronisasi Viewpoint
     this.viewpointBanner = document.getElementById('viewpoint-banner');
     this.vpTitleEl = document.getElementById('vp-banner-title');
     this.vpZoneEl = document.getElementById('vp-banner-zone');
 
-    // Dialog RPG Typewriter
-    this.typewriterTimer = null;
-    this.fullDialogueText = '';
-    this.isTyping = false;
-
-    // Fullscreen Atlas Modal
-    this.atlasModal = document.getElementById('atlas-modal');
-    this.atlasCanvas = document.getElementById('atlas-canvas');
-    this.atlasCtx = this.atlasCanvas ? this.atlasCanvas.getContext('2d') : null;
-    this.btnAtlasClose = document.getElementById('btn-atlas-close');
+    // Tombol Buka Atlas pada Minimap
     this.btnMapExpand = document.getElementById('btn-map-expand');
-    this.atlasCurrentZone = document.getElementById('atlas-current-zone');
-    this.atlasCurrentDesc = document.getElementById('atlas-current-desc');
 
     // Help Modal
     this.helpModal = document.getElementById('help-modal');
@@ -168,10 +144,8 @@ export class MinimapAndHUD {
 
     this.currentZoneId = null;
     this.currentZoneObj = ZONES[0];
-    this.currentDialogueNPC = null;
     this._lastCoordsText = '';
     this._lastMinimapDrawTime = 0;
-    this._lastAtlasDrawTime = 0;
     this.savedPlayerPos = { x: 0, z: 120, y: 2 };
     this.savedPlayerYaw = 0;
 
@@ -325,27 +299,7 @@ export class MinimapAndHUD {
       });
     }
 
-    if (this.btnDialogueClose) {
-      this.btnDialogueClose.addEventListener('click', (e) => {
-        e.stopPropagation();
-        gameState.closeModal(ModalTypes.DIALOGUE);
-      });
-    }
 
-    if (this.dialogueModal) {
-      this.dialogueModal.addEventListener('click', (e) => {
-        if (this.isTyping) {
-          // Klik/ketuk saat teks sedang diketik langsung menyelesaikannya seketika
-          this.finishTypewriter();
-          return;
-        }
-        if (e.target === this.dialogueModal) {
-          gameState.closeModal(ModalTypes.DIALOGUE);
-        }
-      });
-      this.dialogueModal.addEventListener('wheel', (e) => e.stopPropagation());
-      this.dialogueModal.addEventListener('mousedown', (e) => e.stopPropagation());
-    }
 
     if (this.artifactModal) {
       this.artifactModal.addEventListener('click', (e) => {
@@ -481,40 +435,7 @@ export class MinimapAndHUD {
       }
     });
 
-    // Atlas Modal Events
-    if (this.btnAtlasClose) {
-      this.btnAtlasClose.addEventListener('click', (e) => {
-        e.stopPropagation();
-        gameState.closeModal(ModalTypes.ATLAS);
-      });
-    }
-    if (this.atlasModal) {
-      this.atlasModal.addEventListener('click', (e) => {
-        if (e.target === this.atlasModal) gameState.closeModal(ModalTypes.ATLAS);
-      });
-      this.atlasModal.addEventListener('wheel', (e) => e.stopPropagation());
-      this.atlasModal.addEventListener('mousedown', (e) => e.stopPropagation());
-    }
 
-    // Interaktivitas Atlas Canvas (Hover & Klik POI)
-    if (this.atlasCanvas) {
-      this.atlasCanvas.addEventListener('mousemove', (e) => {
-        const rect = this.atlasCanvas.getBoundingClientRect();
-        const cx = ((e.clientX - rect.left) / rect.width) * this.atlasCanvas.width;
-        const cy = ((e.clientY - rect.top) / rect.height) * this.atlasCanvas.height;
-        this.handleAtlasHover(cx, cy);
-      });
-
-      this.atlasCanvas.addEventListener('click', (e) => {
-        const rect = this.atlasCanvas.getBoundingClientRect();
-        const cx = ((e.clientX - rect.left) / rect.width) * this.atlasCanvas.width;
-        const cy = ((e.clientY - rect.top) / rect.height) * this.atlasCanvas.height;
-        this.handleAtlasClick(cx, cy);
-      });
-
-      this.atlasCanvas.addEventListener('mousedown', (e) => e.stopPropagation());
-      this.atlasCanvas.addEventListener('wheel', (e) => e.stopPropagation());
-    }
 
     // Help Modal Events
     if (this.btnHelpClose) {
@@ -576,98 +497,6 @@ export class MinimapAndHUD {
     });
   }
 
-  handleAtlasHover(cx, cy) {
-    if (!this.atlasCanvas) return;
-    const w = this.atlasCanvas.width;
-    const h = this.atlasCanvas.height;
-    const scale = (w - 40) / 380;
-    const wx = (cx - w * 0.5) / scale;
-    const wz = (cy - h * 0.5) / scale;
-
-    let found = false;
-
-    // Check Landmarks
-    for (const lm of LANDMARKS) {
-      const dist = Math.hypot(wx - lm.position.x, wz - lm.position.z);
-      if (dist < 18) {
-        if (this.atlasCurrentZone) this.atlasCurrentZone.textContent = lm.title;
-        if (this.atlasCurrentDesc) this.atlasCurrentDesc.textContent = lm.text;
-        this.atlasCanvas.style.cursor = 'pointer';
-        found = true;
-        break;
-      }
-    }
-
-    if (!found) {
-      // Check NPCs
-      for (const npc of NPC_DATA) {
-        const dist = Math.hypot(wx - npc.coords.x, wz - npc.coords.z);
-        if (dist < 18) {
-          if (this.atlasCurrentZone) this.atlasCurrentZone.textContent = `${npc.icon} ${npc.name} (${npc.title})`;
-          if (this.atlasCurrentDesc) this.atlasCurrentDesc.textContent = `Tokoh Sejarah di ${npc.zone}: "${npc.greeting}"`;
-          this.atlasCanvas.style.cursor = 'pointer';
-          found = true;
-          break;
-        }
-      }
-    }
-
-    if (!found) {
-      // Check Viewpoints
-      for (const vp of VIEWPOINTS) {
-        const dist = Math.hypot(wx - vp.coords.x, wz - vp.coords.z);
-        if (dist < 18) {
-          if (this.atlasCurrentZone) this.atlasCurrentZone.textContent = `🦅 ${vp.name}`;
-          if (this.atlasCurrentDesc) this.atlasCurrentDesc.textContent = `Titik Sinkronisasi Menara Pandang (${vp.zoneTitle}).`;
-          this.atlasCanvas.style.cursor = 'pointer';
-          found = true;
-          break;
-        }
-      }
-    }
-
-    if (!found) {
-      this.atlasCanvas.style.cursor = 'crosshair';
-    }
-  }
-
-  handleAtlasClick(cx, cy) {
-    const w = this.atlasCanvas.width;
-    const h = this.atlasCanvas.height;
-    const scale = (w - 40) / 380;
-    const wx = (cx - w * 0.5) / scale;
-    const wz = (cy - h * 0.5) / scale;
-
-    // Klik NPC membuka Dialog Sejarah
-    for (const npc of NPC_DATA) {
-      const dist = Math.hypot(wx - npc.coords.x, wz - npc.coords.z);
-      if (dist < 18) {
-        this.closeAtlas();
-        this.showDialogue(npc);
-        return;
-      }
-    }
-
-    // Klik landmark membuka Kropak Lontar
-    for (const lm of LANDMARKS) {
-      const dist = Math.hypot(wx - lm.position.x, wz - lm.position.z);
-      if (dist < 18) {
-        this.showLoreModal(lm.title, lm.text);
-        return;
-      }
-    }
-
-    // Klik Viewpoint menampilkan info di sidebar Peta
-    for (const vp of VIEWPOINTS) {
-      const dist = Math.hypot(wx - vp.coords.x, wz - vp.coords.z);
-      if (dist < 18) {
-        if (this.atlasCurrentZone) this.atlasCurrentZone.textContent = `🦅 ${vp.name}`;
-        if (this.atlasCurrentDesc) this.atlasCurrentDesc.textContent = `Menara Pandang di ${vp.zoneTitle}. Kunjungi puncak menara ini dan tekan E / Interaksi untuk membuka peta!`;
-        return;
-      }
-    }
-  }
-
   initGameStateListeners() {
     eventBus.on(GameEvents.MODAL_OPEN, ({ modalType, data }) => {
       this.closeAllDOMModals(modalType);
@@ -682,10 +511,7 @@ export class MinimapAndHUD {
           if (this.loreModal) this.loreModal.classList.remove('hidden');
           break;
         case ModalTypes.DIALOGUE:
-          if (data && data.npc) {
-            this.populateDialogueContent(data.npc);
-          }
-          if (this.dialogueModal) this.dialogueModal.classList.remove('hidden');
+          if (this.dialogue) this.dialogue.show(data?.npc);
           break;
         case ModalTypes.ARTIFACT:
           if (data && data.artifact) {
@@ -696,11 +522,7 @@ export class MinimapAndHUD {
           if (this.artifactModal) this.artifactModal.classList.remove('hidden');
           break;
         case ModalTypes.ATLAS:
-          if (this.atlasModal) {
-            this.atlasModal.classList.remove('hidden');
-            if (this.audio) this.audio.playDialoguePop();
-            this.drawAtlasMap(this.savedPlayerPos, this.savedPlayerYaw);
-          }
+          if (this.atlas) this.atlas.show(this.savedPlayerPos, this.savedPlayerYaw);
           break;
         case ModalTypes.HELP:
           if (this.helpModal) {
@@ -728,8 +550,7 @@ export class MinimapAndHUD {
           if (this.loreModal) this.loreModal.classList.add('hidden');
           break;
         case ModalTypes.DIALOGUE:
-          this.finishTypewriter();
-          if (this.dialogueModal) this.dialogueModal.classList.add('hidden');
+          if (this.dialogue) this.dialogue.hide();
           break;
         case ModalTypes.ARTIFACT:
           if (this.artifactModal) {
@@ -738,7 +559,7 @@ export class MinimapAndHUD {
           }
           break;
         case ModalTypes.ATLAS:
-          if (this.atlasModal) this.atlasModal.classList.add('hidden');
+          if (this.atlas) this.atlas.hide();
           break;
         case ModalTypes.HELP:
           if (this.helpModal) this.helpModal.classList.add('hidden');
@@ -756,96 +577,14 @@ export class MinimapAndHUD {
 
   closeAllDOMModals(exceptType = null) {
     if (exceptType !== ModalTypes.LORE && this.loreModal) this.loreModal.classList.add('hidden');
-    if (exceptType !== ModalTypes.DIALOGUE && this.dialogueModal) {
-      this.finishTypewriter();
-      this.dialogueModal.classList.add('hidden');
-    }
+    if (exceptType !== ModalTypes.DIALOGUE && this.dialogue) this.dialogue.hide();
     if (exceptType !== ModalTypes.ARTIFACT && this.artifactModal) this.artifactModal.classList.add('hidden');
-    if (exceptType !== ModalTypes.ATLAS && this.atlasModal) this.atlasModal.classList.add('hidden');
+    if (exceptType !== ModalTypes.ATLAS && this.atlas) this.atlas.hide();
     if (exceptType !== ModalTypes.HELP && this.helpModal) this.helpModal.classList.add('hidden');
     if (exceptType !== ModalTypes.QUEST_POPOVER && this.questDetailPopover) this.questDetailPopover.classList.add('hidden');
     if (exceptType !== ModalTypes.HEADER_MENU && this.unifiedHeaderMenu) {
       this.unifiedHeaderMenu.classList.add('hidden');
       if (this.btnToggleMenu) this.btnToggleMenu.classList.remove('active');
-    }
-  }
-
-  toggleAtlas() {
-    gameState.toggleModal(ModalTypes.ATLAS);
-  }
-
-  closeAllHUDModals() {
-    gameState.closeAllModals();
-  }
-
-  closeInteractionModals() {
-    if (gameState.isModalOpen()) {
-      gameState.closeAllModals();
-      return true;
-    }
-    return false;
-  }
-
-  openAtlas() {
-    gameState.openModal(ModalTypes.ATLAS);
-  }
-
-  closeAtlas() {
-    gameState.closeModal(ModalTypes.ATLAS);
-  }
-
-  toggleHelp() {
-    gameState.toggleModal(ModalTypes.HELP);
-  }
-
-  openHelp() {
-    gameState.openModal(ModalTypes.HELP);
-  }
-
-  closeHelp() {
-    gameState.closeModal(ModalTypes.HELP);
-  }
-
-  closeDialogue() {
-    gameState.closeModal(ModalTypes.DIALOGUE);
-  }
-
-  startTypewriter(text) {
-    if (this.typewriterTimer) {
-      clearInterval(this.typewriterTimer);
-      this.typewriterTimer = null;
-    }
-
-    this.fullDialogueText = text;
-    this.isTyping = true;
-    this.dialogueTextEl.textContent = '';
-
-    const cursor = document.createElement('span');
-    cursor.className = 'typing-cursor';
-    this.dialogueTextEl.appendChild(cursor);
-
-    let idx = 0;
-    const len = text.length;
-
-    this.typewriterTimer = setInterval(() => {
-      if (idx < len) {
-        this.dialogueTextEl.textContent = text.slice(0, idx + 1);
-        this.dialogueTextEl.appendChild(cursor);
-        idx++;
-      } else {
-        this.finishTypewriter();
-      }
-    }, 15);
-  }
-
-  finishTypewriter() {
-    if (this.typewriterTimer) {
-      clearInterval(this.typewriterTimer);
-      this.typewriterTimer = null;
-    }
-    this.isTyping = false;
-    if (this.dialogueTextEl) {
-      this.dialogueTextEl.textContent = this.fullDialogueText;
     }
   }
 
@@ -915,114 +654,7 @@ export class MinimapAndHUD {
     }
   }
 
-  // RPG Dialogue System (Genshin Impact Style)
-  populateDialogueContent(npc) {
-    if (!npc) return;
-    this.currentDialogueNPC = npc;
-    this.speakerIconEl.textContent = npc.icon;
-    this.speakerNameEl.textContent = npc.name;
-    this.speakerTitleEl.textContent = `${npc.title} • ${npc.zone}`;
-    if (this.speakerFactionEl) {
-      this.speakerFactionEl.textContent = NPC_FACTIONS[npc.id] || 'Tokoh Kerajaan Majapahit';
-    }
 
-    if (this.audio) {
-      this.audio.playNPCGreeting(npc.id);
-    }
-
-    this.renderDialogueNode('root');
-  }
-
-  showDialogue(npc) {
-    gameState.openModal(ModalTypes.DIALOGUE, { npc });
-  }
-
-  renderDialogueNode(nodeKey) {
-    const npc = this.currentDialogueNPC;
-    if (!npc) return;
-
-    if (this.audio) this.audio.playDialoguePop();
-
-    // Cek jika node adalah quest check
-    if (nodeKey === 'quest_check') {
-      const qState = this.quests ? this.quests.getNPCDialogueState(npc.id) : null;
-      if (qState && qState.questPrompt) {
-        this.startTypewriter(qState.questPrompt.text);
-        this.dialogueChoicesEl.innerHTML = '';
-
-        if (qState.questCanTurnIn) {
-          const btnTurnIn = document.createElement('button');
-          btnTurnIn.className = 'btn-choice btn-choice-quest';
-          btnTurnIn.innerHTML = `<span class="choice-ico">🏆</span><span class="choice-txt">Serahkan Bukti Sejarah & Selesaikan Misi!</span>`;
-          btnTurnIn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.quests.completeQuest(qState.questPrompt.questId);
-            this.renderDialogueNode('root');
-          });
-          this.dialogueChoicesEl.appendChild(btnTurnIn);
-        }
-
-        const btnBack = document.createElement('button');
-        btnBack.className = 'btn-choice btn-choice-farewell';
-        btnBack.innerHTML = `<span class="choice-ico">↩️</span><span class="choice-txt">Kembali ke pokok pembicaraan.</span>`;
-        btnBack.addEventListener('click', (e) => {
-          e.stopPropagation();
-          this.renderDialogueNode('root');
-        });
-        this.dialogueChoicesEl.appendChild(btnBack);
-        return;
-      }
-    }
-
-    const node = npc.dialogues[nodeKey] || npc.dialogues['root'];
-    this.startTypewriter(node.text);
-    this.dialogueChoicesEl.innerHTML = '';
-
-    if (node.options && node.options.length > 0) {
-      node.options.forEach((opt, optIdx) => {
-        const btn = document.createElement('button');
-        const isQuestAction = opt.next === 'quest_check' || opt.text.toLowerCase().includes('tugas') || opt.text.toLowerCase().includes('misi');
-        const isFarewell = opt.next === 'root_close' || opt.text.toLowerCase().includes('pamit') || opt.text.toLowerCase().includes('terima kasih');
-
-        const iconSpan = document.createElement('span');
-        iconSpan.className = 'choice-ico';
-        if (isQuestAction) {
-          btn.className = 'btn-choice btn-choice-quest';
-          iconSpan.textContent = '❗';
-        } else if (isFarewell) {
-          btn.className = 'btn-choice btn-choice-farewell';
-          iconSpan.textContent = '👋';
-        } else {
-          btn.className = 'btn-choice';
-          iconSpan.textContent = '💬';
-        }
-
-        btn.style.animationDelay = `${optIdx * 48}ms`;
-
-        const textSpan = document.createElement('span');
-        textSpan.className = 'choice-txt';
-        textSpan.textContent = opt.text;
-
-        btn.appendChild(iconSpan);
-        btn.appendChild(textSpan);
-
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          this.renderDialogueNode(opt.next);
-        });
-        this.dialogueChoicesEl.appendChild(btn);
-      });
-    } else {
-      const btnClose = document.createElement('button');
-      btnClose.className = 'btn-choice btn-choice-farewell';
-      btnClose.innerHTML = `<span class="choice-ico">🚪</span><span class="choice-txt">Pamit & Lanjutkan Penjelajahan</span>`;
-      btnClose.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.closeDialogue();
-      });
-      this.dialogueChoicesEl.appendChild(btnClose);
-    }
-  }
 
   populateLoreContent(title, text) {
     this.loreModalTitle.textContent = title;
@@ -1156,11 +788,8 @@ export class MinimapAndHUD {
     }
 
     // 5. Throttle Atlas Resolusi Tinggi ke ~15 FPS jika sedang terbuka
-    if (this.atlasModal && !this.atlasModal.classList.contains('hidden')) {
-      if (now - this._lastAtlasDrawTime >= 65) {
-        this._lastAtlasDrawTime = now;
-        this.drawAtlasMap(playerPos, playerYaw);
-      }
+    if (this.atlas) {
+      this.atlas.updateIfOpen(now, playerPos, playerYaw);
     }
   }
 
@@ -1369,341 +998,5 @@ export class MinimapAndHUD {
     ctx.fillText('S', w * 0.5, h - 10);
     ctx.fillText('T', w - 10, h * 0.5);
     ctx.fillText('B', 10, h * 0.5);
-  }
-
-  // Render Fullscreen Interactive Atlas (Resolusi 620x620)
-  drawAtlasMap(playerPos, playerYaw) {
-    if (!this.atlasCanvas || !this.atlasCtx) return;
-    const ctx = this.atlasCtx;
-    const w = this.atlasCanvas.width;
-    const h = this.atlasCanvas.height;
-    const scale = (w - 48) / 380;
-    const toMapX = (wx) => w * 0.5 + wx * scale;
-    const toMapY = (wz) => h * 0.5 + wz * scale;
-
-    ctx.clearRect(0, 0, w, h);
-
-    // 1. Latar Belakang Kartografi Kuno (Perkamen Bata Gelap)
-    ctx.fillStyle = '#18100b';
-    ctx.fillRect(0, 0, w, h);
-
-    // Garis Grid Kartografis
-    ctx.strokeStyle = 'rgba(212, 175, 55, 0.08)';
-    ctx.lineWidth = 1;
-    for (let x = 32; x < w - 32; x += 36) {
-      ctx.beginPath();
-      ctx.moveTo(x, 24);
-      ctx.lineTo(x, h - 24);
-      ctx.stroke();
-    }
-    for (let y = 32; y < h - 32; y += 36) {
-      ctx.beginPath();
-      ctx.moveTo(24, y);
-      ctx.lineTo(w - 24, y);
-      ctx.stroke();
-    }
-
-    // Bingkai Ganda Kerajaan Majapahit
-    ctx.strokeStyle = 'rgba(212, 175, 55, 0.35)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(12, 12, w - 24, h - 24);
-    ctx.strokeStyle = 'rgba(212, 175, 55, 0.85)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(16, 16, w - 32, h - 32);
-
-    // Ornamen Sudut Keemasan
-    const corners = [
-      [16, 16],
-      [w - 16, 16],
-      [16, h - 16],
-      [w - 16, h - 16]
-    ];
-    ctx.fillStyle = '#e5b842';
-    for (const [cx, cy] of corners) {
-      ctx.beginPath();
-      ctx.arc(cx, cy, 3.5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // 2. Zona-Zona Sejarah (Lingkaran Transparan & Label Plakat)
-    for (const z of ZONES) {
-      const zx = toMapX(z.center.x);
-      const zy = toMapY(z.center.z);
-      const zr = z.radius * scale;
-
-      ctx.beginPath();
-      ctx.arc(zx, zy, zr, 0, Math.PI * 2);
-      ctx.fillStyle = z.color + '24';
-      ctx.fill();
-      ctx.setLineDash([5, 5]);
-      ctx.strokeStyle = z.color + '77';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Plakat Nama Wilayah
-      const label = z.name.replace(/^\d+\.\s*/, '').toUpperCase();
-      ctx.font = 'bold 9.5px "Cinzel", serif';
-      const tw = ctx.measureText(label).width;
-      ctx.fillStyle = 'rgba(16, 9, 6, 0.85)';
-      ctx.fillRect(zx - tw * 0.5 - 6, zy - zr + 4, tw + 12, 16);
-      ctx.strokeStyle = z.color;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(zx - tw * 0.5 - 6, zy - zr + 4, tw + 12, 16);
-      ctx.fillStyle = '#fce8b2';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(label, zx, zy - zr + 12);
-    }
-
-    // 3. Sungai Brantas & Kanal Canggu
-    ctx.beginPath();
-    for (let wx = -190; wx <= 190; wx += 4) {
-      const rz = getRiverCenterZ(wx);
-      const mx = toMapX(wx);
-      const my = toMapY(rz);
-      if (wx === -190) ctx.moveTo(mx, my);
-      else ctx.lineTo(mx, my);
-    }
-    ctx.strokeStyle = '#257d8f';
-    ctx.lineWidth = 15;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.stroke();
-
-    ctx.strokeStyle = '#4cb3c4';
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-
-    ctx.font = 'italic 10px serif';
-    ctx.fillStyle = '#afe6f0';
-    ctx.fillText('~ Sungai Brantas & Aliran Air Kotaraja ~', toMapX(-45), toMapY(getRiverCenterZ(-45)) - 12);
-
-    // 4. Waduk Kolam Segaran Kuno (6,5 Hektar)
-    const kx = toMapX(-68);
-    const ky = toMapY(-20);
-    const kw = 32 * scale;
-    const kh = 50 * scale;
-
-    ctx.fillStyle = '#1b6473';
-    ctx.fillRect(kx, ky, kw, kh);
-    ctx.strokeStyle = '#b84a39';
-    ctx.lineWidth = 3.5;
-    ctx.strokeRect(kx, ky, kw, kh);
-    ctx.strokeStyle = '#e5b842';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(kx + 2, ky + 2, kw - 4, kh - 4);
-
-    ctx.font = 'bold 9px "Cinzel", serif';
-    ctx.fillStyle = '#fce8b2';
-    ctx.fillText('KOLAM SEGARAN', kx + kw * 0.5, ky + kh * 0.5);
-
-    // 5. Jaringan Jalan Kerajaan
-    ctx.strokeStyle = '#b86843';
-    ctx.lineWidth = 4;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(toMapX(0), toMapY(160));
-    ctx.lineTo(toMapX(0), toMapY(-130));
-    ctx.moveTo(toMapX(-140), toMapY(12));
-    ctx.lineTo(toMapX(135), toMapY(12));
-    ctx.lineTo(toMapX(125), toMapY(-20));
-    ctx.moveTo(toMapX(0), toMapY(8));
-    ctx.lineTo(toMapX(-36), toMapY(8));
-    ctx.stroke();
-
-    ctx.strokeStyle = '#dfa57e';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 6]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // 6. Parit Pertahanan & Benteng Kedaton Agung
-    const kedX = toMapX(-46);
-    const kedY = toMapY(-146);
-    const kedW = 92 * scale;
-    const kedH = 62 * scale;
-    ctx.strokeStyle = '#257d8f';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(kedX, kedY, kedW, kedH);
-    ctx.strokeStyle = '#a33a26';
-    ctx.lineWidth = 2.5;
-    ctx.strokeRect(kedX + 4, kedY + 4, kedW - 8, kedH - 8);
-
-    // 7. Jembatan Emas / Kayu Kerajaan
-    ctx.fillStyle = '#d4af37';
-    for (const b of BRIDGES) {
-      const bx = toMapX(b.xMin);
-      const by = toMapY(b.zMin);
-      const bw = Math.max(5, (b.xMax - b.xMin) * scale);
-      const bh = Math.max(5, (b.zMax - b.zMin) * scale);
-      ctx.fillRect(bx, by, bw, bh);
-      ctx.strokeStyle = '#5a3014';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(bx, by, bw, bh);
-    }
-
-    // 8. Titik Prasasti Sejarah (Landmarks)
-    for (const lm of LANDMARKS) {
-      const lx = toMapX(lm.position.x);
-      const ly = toMapY(lm.position.z);
-
-      ctx.save();
-      ctx.translate(lx, ly);
-      ctx.rotate(Math.PI / 4);
-      ctx.fillStyle = '#f9d976';
-      ctx.fillRect(-4, -4, 8, 8);
-      ctx.strokeStyle = '#5a3014';
-      ctx.lineWidth = 1.2;
-      ctx.strokeRect(-4, -4, 8, 8);
-      ctx.restore();
-
-      ctx.font = '8.5px sans-serif';
-      ctx.fillStyle = '#ffecb3';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
-      ctx.fillText(lm.title.split(' ')[0], lx, ly + 6);
-    }
-
-    // 9. Tokoh Sejarah NPC
-    for (const npc of NPC_DATA) {
-      const nx = toMapX(npc.coords.x);
-      const ny = toMapY(npc.coords.z);
-
-      ctx.beginPath();
-      ctx.arc(nx, ny, 6, 0, Math.PI * 2);
-      ctx.fillStyle = '#2ecc71';
-      ctx.fill();
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      ctx.font = 'bold 10px sans-serif';
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
-      ctx.fillText(npc.icon, nx, ny - 6);
-    }
-
-    // 10. Menara Pandang (Viewpoints 🦅)
-    for (const vp of VIEWPOINTS) {
-      const vx = toMapX(vp.coords.x);
-      const vy = toMapY(vp.coords.z);
-      const isSynced = this.exploration ? this.exploration.syncedViewpoints.includes(vp.id) : false;
-
-      ctx.beginPath();
-      ctx.arc(vx, vy, 6, 0, Math.PI * 2);
-      ctx.fillStyle = isSynced ? '#ffd700' : '#4fa3e3';
-      ctx.fill();
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      ctx.font = '10px sans-serif';
-      ctx.fillStyle = isSynced ? '#ffd700' : '#88d1f7';
-      ctx.fillText('🦅', vx, vy - 7);
-    }
-
-    // 11. Peti Artefak (Jika Lentera Waktu Menyala)
-    if (this.exploration && this.exploration.isLanternActive) {
-      for (const art of HISTORICAL_ARTIFACTS) {
-        if (this.exploration.collectedArtifacts.includes(art.id)) continue;
-        const ax = toMapX(art.coords.x);
-        const ay = toMapY(art.coords.z);
-
-        ctx.beginPath();
-        ctx.arc(ax, ay, 4.5, 0, Math.PI * 2);
-        ctx.fillStyle = '#ffb300';
-        ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 1.2;
-        ctx.stroke();
-      }
-    }
-
-    // 12. Posisi Pemain Aktif, Lingkaran Sinyal & Sudut Pandang
-    const px = toMapX(playerPos.x);
-    const py = toMapY(playerPos.z);
-
-    // Cincin radar berkedip hidup di Atlas
-    const atlasPulse = (Date.now() * 0.0022) % 1.0;
-    ctx.beginPath();
-    ctx.arc(px, py, 10 + atlasPulse * 14, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(255, 230, 100, ${(1 - atlasPulse) * 0.68})`;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Tanda Sasaran Misi Aktif pada Atlas Besar
-    if (this.quests) {
-      const aq = this.quests.getActiveQuest();
-      if (aq) {
-        const turnIn = this.quests.canCompleteQuest(aq.id);
-        let tx = null;
-        let tz = null;
-        if (turnIn) {
-          const npc = NPC_DATA.find((n) => n.id === aq.npcId);
-          if (npc) { tx = npc.coords.x; tz = npc.coords.z; }
-        } else {
-          const rem = aq.requiredRelics.filter((rId) => !this.exploration.collectedArtifacts.includes(rId));
-          if (rem.length > 0) {
-            const art = HISTORICAL_ARTIFACTS.find((a) => a.id === rem[0]);
-            if (art) { tx = art.coords.x; tz = art.coords.z; }
-          }
-        }
-        if (tx !== null && tz !== null) {
-          const axQ = toMapX(tx);
-          const ayQ = toMapY(tz);
-          ctx.beginPath();
-          ctx.arc(axQ, ayQ, 9 + atlasPulse * 8, 0, Math.PI * 2);
-          ctx.strokeStyle = turnIn ? 'rgba(93, 242, 189, 0.8)' : 'rgba(255, 210, 72, 0.85)';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-        }
-      }
-    }
-
-    ctx.save();
-    ctx.translate(px, py);
-    ctx.rotate(-playerYaw);
-
-    // Sudut pandang kerucut
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(-12, -26);
-    ctx.lineTo(12, -26);
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(255, 215, 0, 0.38)';
-    ctx.fill();
-
-    // Titik pusat pemain
-    ctx.beginPath();
-    ctx.arc(0, 0, 6.5, 0, Math.PI * 2);
-    ctx.fillStyle = '#fff5d6';
-    ctx.fill();
-    ctx.strokeStyle = '#c0392b';
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-    ctx.restore();
-
-    ctx.font = 'bold 9.5px sans-serif';
-    ctx.fillStyle = '#fff2d1';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillText('📍 Anda di Sini', px, py + 16);
-
-    // 13. Surya Majapahit Kompas Penunjuk Arah Mata Angin
-    const rx = w - 46;
-    const ry = 46;
-    ctx.font = 'bold 12px "Cinzel", serif';
-    ctx.fillStyle = '#d4af37';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('☀️', rx, ry);
-    ctx.font = 'bold 9px "Cinzel", serif';
-    ctx.fillText('U', rx, ry - 17);
-    ctx.fillText('S', rx, ry + 17);
-    ctx.fillText('T', rx + 17, ry);
-    ctx.fillText('B', rx - 17, ry);
   }
 }
