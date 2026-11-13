@@ -33,26 +33,34 @@ export class CharacterModel {
     this.torsoGroup.position.y = 1.05;
     this.group.add(this.torsoGroup);
 
-    // Dada & Baju Surjan
-    const chestGeo = new THREE.BoxGeometry(0.74, 0.88, 0.44);
+    // Dada & Baju Surjan Beskap Tapered
+    const chestGeo = new THREE.CylinderGeometry(0.39, 0.34, 0.88, 12);
     const chest = new THREE.Mesh(chestGeo, this.matSurjan);
+    chest.scale.set(1.08, 1.0, 0.68);
     chest.position.y = 0.44;
     chest.castShadow = true;
     this.torsoGroup.add(chest);
 
+    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.045, 6, 12), this.matGold);
+    collar.rotation.x = Math.PI / 2;
+    collar.position.y = 0.88;
+    this.torsoGroup.add(collar);
+
     // Sabuk Emas Kerajaan (Pending Emas Majapahit)
-    const belt = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.16, 0.48), this.matGold);
+    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.365, 0.37, 0.16, 12), this.matGold);
+    belt.scale.set(1.08, 1.0, 0.72);
     belt.position.y = 0.08;
     this.torsoGroup.add(belt);
 
     // Rumbai Selendang Samping
-    this.sash = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.62, 0.08), this.matGold);
-    this.sash.position.set(0.35, -0.22, 0.18);
+    this.sash = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.11, 0.62, 8), this.matGold);
+    this.sash.scale.set(1.0, 1.0, 0.45);
+    this.sash.position.set(0.36, -0.22, 0.16);
     this.torsoGroup.add(this.sash);
 
-    // Tas Selempang Penjelajah Waktu
-    const bag = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.62, 0.28), this.matLeather);
-    bag.position.set(0, 0.48, 0.3);
+    // Tas Selempang Penjelajah Waktu + Penutup Lengkung
+    const bag = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.56, 0.24), this.matLeather);
+    bag.position.set(0, 0.48, 0.29);
     bag.castShadow = true;
     this.torsoGroup.add(bag);
 
@@ -63,96 +71,145 @@ export class CharacterModel {
     this.torsoGroup.add(scroll);
 
     // Keris Pusaka di pinggang belakang
-    const kerisHilt = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.35, 6), this.matWood);
-    kerisHilt.position.set(-0.25, 0.12, 0.28);
+    const kerisSheath = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.025, 0.48, 6), this.matGold);
+    kerisSheath.position.set(-0.22, -0.02, 0.28);
+    kerisSheath.rotation.z = 0.45;
+    this.torsoGroup.add(kerisSheath);
+
+    const kerisHilt = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.22, 6), this.matWood);
+    kerisHilt.position.set(-0.34, 0.24, 0.28);
     kerisHilt.rotation.z = 0.45;
     this.torsoGroup.add(kerisHilt);
 
-    // 2. Leher, Kepala & Udeng
+    // 2. Leher, Kepala & Udeng Jawa Timur Berkibar
     this.headGroup = new THREE.Group();
     this.headGroup.position.set(0, 0.92, 0);
     this.torsoGroup.add(this.headGroup);
 
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.52, 0.5), this.matSkin);
-    head.position.y = 0.26;
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, 0.14, 10), this.matSkin);
+    neck.position.y = 0.04;
+    this.headGroup.add(neck);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.27, 14, 12), this.matSkin);
+    head.scale.set(0.95, 1.08, 0.96);
+    head.position.y = 0.29;
     head.castShadow = true;
     this.headGroup.add(head);
 
-    // Rambut
-    const hair = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.2, 0.54), this.matHair);
-    hair.position.y = 0.46;
+    // Mata Penjelajah
+    for (const ex of [-0.09, 0.09]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.032, 6, 6), this.matHair);
+      eye.position.set(ex, 0.30, -0.24);
+      this.headGroup.add(eye);
+    }
+
+    // Rambut & Udeng / Ikat Kepala Tradisional Jawa Timur
+    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.28, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), this.matHair);
+    hair.position.set(0, 0.31, 0.02);
+    hair.rotation.x = 0.18;
     this.headGroup.add(hair);
 
-    // Udeng / Ikat Kepala Tradisional Jawa Timur
-    const udengBase = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.12, 0.56), this.matSurjan);
-    udengBase.position.y = 0.38;
+    const udengBase = new THREE.Mesh(new THREE.TorusGeometry(0.255, 0.068, 8, 16), this.matSurjan);
+    udengBase.rotation.x = Math.PI / 2 - 0.08;
+    udengBase.position.y = 0.41;
     this.headGroup.add(udengBase);
 
-    const udengFold = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.16, 0.14), this.matGold);
-    udengFold.position.set(0, 0.45, -0.26);
+    const udengFold = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.24, 6), this.matGold);
+    udengFold.position.set(0, 0.50, -0.23);
+    udengFold.rotation.x = -0.25;
     this.headGroup.add(udengFold);
 
-    // 3. Lengan Kiri & Lentera Penjelajah
+    // 3. Lengan Kiri (Bahu + Lengan Beskap + Tangan) & Lentera Penjelajah
     this.leftArmGroup = new THREE.Group();
-    this.leftArmGroup.position.set(-0.52, 0.82, 0);
+    this.leftArmGroup.position.set(-0.48, 0.82, 0);
     this.torsoGroup.add(this.leftArmGroup);
 
-    const leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.76, 0.24), this.matSkin);
-    leftArm.position.y = -0.38;
-    leftArm.castShadow = true;
-    this.leftArmGroup.add(leftArm);
+    const leftShoulder = new THREE.Mesh(new THREE.SphereGeometry(0.125, 10, 8), this.matSurjan);
+    this.leftArmGroup.add(leftShoulder);
+
+    const leftSleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.095, 0.44, 10), this.matSurjan);
+    leftSleeve.position.y = -0.22;
+    leftSleeve.castShadow = true;
+    this.leftArmGroup.add(leftSleeve);
+
+    const leftForearm = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.075, 0.34, 10), this.matSkin);
+    leftForearm.position.y = -0.56;
+    leftForearm.castShadow = true;
+    this.leftArmGroup.add(leftForearm);
+
+    const leftHand = new THREE.Mesh(new THREE.SphereGeometry(0.085, 8, 8), this.matSkin);
+    leftHand.position.y = -0.74;
+    this.leftArmGroup.add(leftHand);
 
     // Lentera Perunggu Menyala di tangan kiri
     this.lanternGroup = new THREE.Group();
-    this.lanternGroup.position.set(0, -0.78, -0.15);
+    this.lanternGroup.position.set(0, -0.82, -0.15);
     this.leftArmGroup.add(this.lanternGroup);
 
-    const lanternFrame = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 0.32, 6), this.matWood);
+    const lanternCap = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.12, 6), this.matGold);
+    lanternCap.position.y = 0.16;
+    this.lanternGroup.add(lanternCap);
+
+    const lanternFrame = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.28, 6), this.matWood);
     this.lanternGroup.add(lanternFrame);
 
-    const lanternCore = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), this.matLanternGlow);
-    lanternCore.position.y = 0.02;
+    const lanternCore = new THREE.Mesh(new THREE.SphereGeometry(0.095, 8, 8), this.matLanternGlow);
+    lanternCore.position.y = 0.01;
     this.lanternGroup.add(lanternCore);
 
     this.lanternLight = new THREE.PointLight('#ff9933', 1.2, 16, 1.8);
     this.lanternLight.position.set(0, 0.05, 0);
     this.lanternGroup.add(this.lanternLight);
 
-    // 4. Lengan Kanan
+    // 4. Lengan Kanan (Simetris Bersiluet Halus)
     this.rightArmGroup = new THREE.Group();
-    this.rightArmGroup.position.set(0.52, 0.82, 0);
+    this.rightArmGroup.position.set(0.48, 0.82, 0);
     this.torsoGroup.add(this.rightArmGroup);
 
-    const rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.76, 0.24), this.matSkin);
-    rightArm.position.y = -0.38;
-    rightArm.castShadow = true;
-    this.rightArmGroup.add(rightArm);
+    const rightShoulder = new THREE.Mesh(new THREE.SphereGeometry(0.125, 10, 8), this.matSurjan);
+    this.rightArmGroup.add(rightShoulder);
 
-    // 5. Kaki Kiri & Kanan (Pangkal paha)
+    const rightSleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.095, 0.44, 10), this.matSurjan);
+    rightSleeve.position.y = -0.22;
+    rightSleeve.castShadow = true;
+    this.rightArmGroup.add(rightSleeve);
+
+    const rightForearm = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.075, 0.34, 10), this.matSkin);
+    rightForearm.position.y = -0.56;
+    rightForearm.castShadow = true;
+    this.rightArmGroup.add(rightForearm);
+
+    const rightHand = new THREE.Mesh(new THREE.SphereGeometry(0.085, 8, 8), this.matSkin);
+    rightHand.position.y = -0.74;
+    this.rightArmGroup.add(rightHand);
+
+    // 5. Kaki Kiri & Kanan (Silinder Meruncing + Alas Kaki Terompah Halus)
     this.leftLegGroup = new THREE.Group();
-    this.leftLegGroup.position.set(-0.22, 1.05, 0);
+    this.leftLegGroup.position.set(-0.21, 1.05, 0);
     this.group.add(this.leftLegGroup);
 
-    const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.98, 0.28), this.matPants);
-    leftLeg.position.y = -0.49;
+    const leftLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.115, 0.94, 10), this.matPants);
+    leftLeg.position.y = -0.47;
     leftLeg.castShadow = true;
     this.leftLegGroup.add(leftLeg);
 
-    const leftFoot = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.12, 0.42), this.matLeather);
-    leftFoot.position.set(0, -0.98, -0.06);
+    const leftFoot = new THREE.Mesh(new THREE.CapsuleGeometry ? new THREE.CapsuleGeometry(0.095, 0.16, 4, 8) : new THREE.BoxGeometry(0.24, 0.12, 0.38), this.matLeather);
+    leftFoot.rotation.x = Math.PI / 2;
+    leftFoot.position.set(0, -0.96, -0.06);
     this.leftLegGroup.add(leftFoot);
 
     this.rightLegGroup = new THREE.Group();
-    this.rightLegGroup.position.set(0.22, 1.05, 0);
+    this.rightLegGroup.position.set(0.21, 1.05, 0);
     this.group.add(this.rightLegGroup);
 
-    const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.98, 0.28), this.matPants);
-    rightLeg.position.y = -0.49;
+    const rightLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.115, 0.94, 10), this.matPants);
+    rightLeg.position.y = -0.47;
     rightLeg.castShadow = true;
     this.rightLegGroup.add(rightLeg);
 
-    const rightFoot = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.12, 0.42), this.matLeather);
-    rightFoot.position.set(0, -0.98, -0.06);
+    const rightFoot = new THREE.Mesh(new THREE.CapsuleGeometry ? new THREE.CapsuleGeometry(0.095, 0.16, 4, 8) : new THREE.BoxGeometry(0.24, 0.12, 0.38), this.matLeather);
+    rightFoot.rotation.x = Math.PI / 2;
+    rightFoot.position.set(0, -0.96, -0.06);
     this.rightLegGroup.add(rightFoot);
   }
 

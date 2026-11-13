@@ -50,6 +50,31 @@
   <!-- Intro / Start Screen Modal -->
   <div id="intro-overlay" class="overlay-screen">
     <div class="intro-card">
+      <div class="intro-surya-emblem" aria-hidden="true">
+        <svg class="surya-spin-ring" viewBox="0 0 120 120" width="68" height="68">
+          <defs>
+            <linearGradient id="suryaGold" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#fff4c2"/>
+              <stop offset="50%" stop-color="#e5b842"/>
+              <stop offset="100%" stop-color="#b85b28"/>
+            </linearGradient>
+          </defs>
+          <circle cx="60" cy="60" r="46" fill="none" stroke="url(#suryaGold)" stroke-width="1.2" stroke-dasharray="4 5" opacity="0.6"/>
+          <g fill="url(#suryaGold)" opacity="0.9">
+            <polygon points="60,4 65,24 55,24"/>
+            <polygon points="60,116 65,96 55,96"/>
+            <polygon points="4,60 24,55 24,65"/>
+            <polygon points="116,60 96,55 96,65"/>
+            <polygon points="20,20 37,31 31,37"/>
+            <polygon points="100,100 83,89 89,83"/>
+            <polygon points="100,20 89,37 83,31"/>
+            <polygon points="20,100 31,83 37,89"/>
+          </g>
+          <circle cx="60" cy="60" r="21" fill="rgba(26,15,9,0.9)" stroke="url(#suryaGold)" stroke-width="2.2"/>
+          <circle cx="60" cy="60" r="12" fill="none" stroke="#fff3c4" stroke-width="1" opacity="0.7"/>
+        </svg>
+        <span class="surya-core-icon">☀️</span>
+      </div>
       <div class="badge-era">MATERI SEJARAH SMP KELAS VII • KURIKULUM MERDEKA</div>
       <h1 class="game-title">EKSPEDISI MAJAPAHIT</h1>
       <h2 class="game-subtitle">Jejak Sang Mahapatih • Trowulan 1350 M</h2>
@@ -233,7 +258,10 @@
     <!-- Artifact Discovery Modal -->
     <div id="artifact-modal" class="artifact-modal hidden">
       <div class="artifact-card">
-        <div class="art-glow">✨</div>
+        <div class="art-glow-halo">
+          <div class="art-sunburst" aria-hidden="true"></div>
+          <div class="art-glow">✨</div>
+        </div>
         <div class="art-badge">PENEMUAN ARTEFAK SEJARAH MAJAPAHIT</div>
         <h2 id="art-modal-title" class="art-title">Nama Artefak</h2>
         <div class="art-meta">

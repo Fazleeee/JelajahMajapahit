@@ -73,15 +73,49 @@ html, body {
   margin: auto;
   max-width: 720px;
   width: 100%;
-  background: radial-gradient(ellipse at top center, rgba(229, 184, 66, 0.14) 0%, transparent 55%),
+  background: radial-gradient(ellipse at top center, rgba(229, 184, 66, 0.18) 0%, transparent 55%),
     linear-gradient(165deg, rgba(35, 22, 15, 0.94) 0%, rgba(16, 10, 7, 0.98) 100%);
-  border: 1.5px solid rgba(229, 184, 66, 0.52);
+  border: 1.5px solid rgba(229, 184, 66, 0.56);
   border-radius: 28px;
-  padding: 36px 40px;
+  padding: 32px 40px 36px;
   text-align: center;
-  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 240, 195, 0.2), 0 0 45px rgba(212, 175, 55, 0.16);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 240, 195, 0.24), 0 0 55px rgba(212, 175, 55, 0.18);
   position: relative;
   touch-action: pan-y;
+}
+
+.intro-surya-emblem {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  margin: 0 auto 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.surya-spin-ring {
+  position: absolute;
+  inset: 0;
+  animation: suryaSpin 24s linear infinite;
+  filter: drop-shadow(0 0 12px rgba(229, 184, 66, 0.45));
+}
+
+.surya-core-icon {
+  position: relative;
+  z-index: 2;
+  font-size: 1.35rem;
+  animation: heartFloat 3.2s ease-in-out infinite;
+}
+
+@keyframes suryaSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes heartFloat {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.06); }
 }
 
 .badge-era {
@@ -179,22 +213,42 @@ kbd {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #d4af37 0%, #b85b28 100%);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #fbe288 0%, #d4af37 45%, #b85b28 100%);
   color: #170e08;
   font-weight: 800;
   font-size: 1.05rem;
   padding: 14px 36px;
-  border: none;
+  border: 1px solid rgba(255, 248, 220, 0.55);
   border-radius: 999px;
   cursor: pointer;
   letter-spacing: 0.6px;
-  box-shadow: 0 10px 25px rgba(212, 175, 55, 0.35);
+  box-shadow: 0 10px 28px rgba(212, 175, 55, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.45);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 45%;
+  height: 200%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  transform: rotate(24deg);
+  animation: ctaSheen 3.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes ctaSheen {
+  0%, 62% { left: -60%; }
+  100% { left: 135%; }
+}
+
 .btn-primary:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 14px 32px rgba(212, 175, 55, 0.55);
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 14px 36px rgba(229, 184, 66, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 /* HUD Overlay */
@@ -274,7 +328,18 @@ kbd {
 
 .quest-pill.quest-ready {
   border-color: #2ecc71;
-  box-shadow: 0 6px 22px rgba(46, 204, 113, 0.35), 0 0 14px rgba(229, 184, 66, 0.35);
+  box-shadow: 0 6px 24px rgba(46, 204, 113, 0.4), 0 0 18px rgba(229, 184, 66, 0.4);
+  animation: questReadyPulse 2.2s ease-in-out infinite;
+}
+
+@keyframes questReadyPulse {
+  0%, 100% { box-shadow: 0 6px 22px rgba(46, 204, 113, 0.35), 0 0 14px rgba(229, 184, 66, 0.3); }
+  50% { box-shadow: 0 6px 30px rgba(46, 204, 113, 0.65), 0 0 24px rgba(229, 184, 66, 0.55); }
+}
+
+.quest-pill-icon {
+  display: inline-block;
+  animation: heartFloat 3.4s ease-in-out infinite;
 }
 
 .quest-pill.quest-ready .quest-pill-badge {
@@ -391,6 +456,13 @@ kbd {
 
 .zone-pill-icon {
   font-size: 1.05rem;
+  display: inline-block;
+  animation: zonePinBob 2.8s ease-in-out infinite;
+}
+
+@keyframes zonePinBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
 }
 
 .zone-pill-info {
@@ -791,10 +863,12 @@ kbd {
 
 @keyframes pulseGold {
   0%, 100% {
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 15px rgba(212, 175, 55, 0.25);
+    transform: translate(-50%, 0);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 16px rgba(212, 175, 55, 0.28);
   }
   50% {
-    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.8), 0 0 25px rgba(212, 175, 55, 0.55);
+    transform: translate(-50%, -3px);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.82), 0 0 28px rgba(229, 184, 66, 0.62);
   }
 }
 
@@ -1028,6 +1102,16 @@ kbd {
   pointer-events: none;
 }
 
+.minimap-frame::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(251, 226, 136, 0.34);
+  pointer-events: none;
+  animation: suryaSpin 36s linear infinite;
+}
+
 .minimap-frame:hover,
 .minimap-frame:active {
   border-color: var(--gold-light);
@@ -1216,9 +1300,37 @@ body.lantern-active::after {
   }
 }
 
+.art-glow-halo {
+  position: relative;
+  width: 78px;
+  height: 78px;
+  margin: 0 auto 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.art-sunburst {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(251, 226, 136, 0.28) 0deg 14deg,
+    transparent 14deg 30deg
+  );
+  -webkit-mask-image: radial-gradient(circle, rgba(0,0,0,1) 20%, transparent 72%);
+  mask-image: radial-gradient(circle, rgba(0,0,0,1) 20%, transparent 72%);
+  animation: suryaSpin 16s linear infinite;
+}
+
 .art-glow {
+  position: relative;
+  z-index: 2;
   font-size: 2.5rem;
-  margin-bottom: 6px;
+  margin-bottom: 0;
+  animation: heartFloat 2.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 14px rgba(251, 226, 136, 0.7));
 }
 
 .art-badge {
@@ -1387,8 +1499,20 @@ body.lantern-active::after {
   min-height: 42px;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 240, 195, 0.12);
   -webkit-tap-highlight-color: transparent;
+  animation: choiceSlideIn 0.24s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@keyframes choiceSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .choice-ico {
@@ -3277,11 +3401,26 @@ body.lantern-active::after {
   }
 
   .intro-card {
-    padding: 14px 20px !important;
+    padding: 12px 20px !important;
     border-radius: 16px !important;
     max-width: 600px !important;
     margin: auto !important;
     touch-action: pan-y !important;
+  }
+
+  .intro-surya-emblem {
+    width: 42px !important;
+    height: 42px !important;
+    margin: 0 auto 4px !important;
+  }
+
+  .surya-spin-ring {
+    width: 42px !important;
+    height: 42px !important;
+  }
+
+  .surya-core-icon {
+    font-size: 0.95rem !important;
   }
 
   .badge-era {

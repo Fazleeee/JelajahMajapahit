@@ -989,7 +989,7 @@ export class MinimapAndHUD {
     this.dialogueChoicesEl.innerHTML = '';
 
     if (node.options && node.options.length > 0) {
-      node.options.forEach((opt) => {
+      node.options.forEach((opt, optIdx) => {
         const btn = document.createElement('button');
         const isQuestAction = opt.next === 'quest_check' || opt.text.toLowerCase().includes('tugas') || opt.text.toLowerCase().includes('misi');
         const isFarewell = opt.next === 'root_close' || opt.text.toLowerCase().includes('pamit') || opt.text.toLowerCase().includes('terima kasih');
@@ -1006,6 +1006,8 @@ export class MinimapAndHUD {
           btn.className = 'btn-choice';
           iconSpan.textContent = '💬';
         }
+
+        btn.style.animationDelay = `${optIdx * 48}ms`;
 
         const textSpan = document.createElement('span');
         textSpan.className = 'choice-txt';
@@ -1257,15 +1259,43 @@ export class MinimapAndHUD {
         if (hasBeacon) {
           const pulse = (Date.now() * 0.003) % 1.0;
           ctx.strokeStyle = beaconColor;
-          ctx.lineWidth = 1.5;
+          ctx.lineWidth = 1.6;
           ctx.beginPath();
-          ctx.arc(qx, qy, 4 + pulse * 7, 0, Math.PI * 2);
+          ctx.arc(qx, qy, 4 + pulse * 8, 0, Math.PI * 2);
           ctx.stroke();
 
           ctx.fillStyle = beaconColor;
           ctx.beginPath();
-          ctx.arc(qx, qy, 3.5, 0, Math.PI * 2);
+          ctx.arc(qx, qy, 3.6, 0, Math.PI * 2);
           ctx.fill();
+
+          // Penunjuk arah kompas misi pada tepi cincin radar bila jaraknya jauh dari pemain
+          const pxRaw = toMapX(playerPos.x);
+          const pyRaw = toMapY(playerPos.z);
+          const dxQ = qx - pxRaw;
+          const dyQ = qy - pyRaw;
+          const distQ = Math.hypot(dxQ, dyQ);
+          if (distQ > 12) {
+            const angQ = Math.atan2(dyQ, dxQ);
+            const ringR = w * 0.43;
+            const cxRim = w * 0.5 + Math.cos(angQ) * ringR;
+            const cyRim = h * 0.5 + Math.sin(angQ) * ringR;
+            ctx.save();
+            ctx.translate(cxRim, cyRim);
+            ctx.rotate(angQ);
+            ctx.fillStyle = beaconColor;
+            ctx.strokeStyle = '#1c1008';
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.moveTo(6, 0);
+            ctx.lineTo(-4, -4);
+            ctx.lineTo(-2, 0);
+            ctx.lineTo(-4, 4);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+          }
         }
       }
     }
@@ -1318,13 +1348,35 @@ export class MinimapAndHUD {
 
     ctx.restore();
 
-    // 6. Cincin bayangan vignette radar melingkar & arah kompas U (Utara)
+    // 6. Sapuan radar berputar halus, tanda mata angin T/S/B & cincin vignette melingkar
+    const sweepAng = (Date.now() * 0.0014) % (Math.PI * 2);
+    ctx.save();
+    ctx.translate(w * 0.5, h * 0.5);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, w * 0.48, sweepAng, sweepAng + 0.52);
+    ctx.closePath();
+    const sweepGrad = ctx.createRadialGradient(0, 0, 4, 0, 0, w * 0.48);
+    sweepGrad.addColorStop(0, 'rgba(251, 226, 136, 0.02)');
+    sweepGrad.addColorStop(1, 'rgba(251, 226, 136, 0.14)');
+    ctx.fillStyle = sweepGrad;
+    ctx.fill();
+    ctx.restore();
+
     const rimGrad = ctx.createRadialGradient(w * 0.5, h * 0.5, w * 0.36, w * 0.5, h * 0.5, w * 0.51);
     rimGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    rimGrad.addColorStop(0.75, 'rgba(10, 6, 4, 0.18)');
-    rimGrad.addColorStop(1, 'rgba(10, 6, 4, 0.62)');
+    rimGrad.addColorStop(0.75, 'rgba(10, 6, 4, 0.2)');
+    rimGrad.addColorStop(1, 'rgba(10, 6, 4, 0.66)');
     ctx.fillStyle = rimGrad;
     ctx.fillRect(0, 0, w, h);
+
+    ctx.font = 'bold 8.5px "Cinzel", serif';
+    ctx.fillStyle = 'rgba(251, 226, 136, 0.72)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('S', w * 0.5, h - 10);
+    ctx.fillText('T', w - 10, h * 0.5);
+    ctx.fillText('B', 10, h * 0.5);
   }
 
   // Render Fullscreen Interactive Atlas (Resolusi 620x620)
@@ -1582,12 +1634,42 @@ export class MinimapAndHUD {
     const px = toMapX(playerPos.x);
     const py = toMapY(playerPos.z);
 
-    // Cincin radar berkedip
+    // Cincin radar berkedip hidup di Atlas
+    const atlasPulse = (Date.now() * 0.0022) % 1.0;
     ctx.beginPath();
-    ctx.arc(px, py, 14, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255, 230, 100, 0.55)';
+    ctx.arc(px, py, 10 + atlasPulse * 14, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255, 230, 100, ${(1 - atlasPulse) * 0.68})`;
     ctx.lineWidth = 2;
     ctx.stroke();
+
+    // Tanda Sasaran Misi Aktif pada Atlas Besar
+    if (this.quests) {
+      const aq = this.quests.getActiveQuest();
+      if (aq) {
+        const turnIn = this.quests.canCompleteQuest(aq.id);
+        let tx = null;
+        let tz = null;
+        if (turnIn) {
+          const npc = NPC_DATA.find((n) => n.id === aq.npcId);
+          if (npc) { tx = npc.coords.x; tz = npc.coords.z; }
+        } else {
+          const rem = aq.requiredRelics.filter((rId) => !this.exploration.collectedArtifacts.includes(rId));
+          if (rem.length > 0) {
+            const art = HISTORICAL_ARTIFACTS.find((a) => a.id === rem[0]);
+            if (art) { tx = art.coords.x; tz = art.coords.z; }
+          }
+        }
+        if (tx !== null && tz !== null) {
+          const axQ = toMapX(tx);
+          const ayQ = toMapY(tz);
+          ctx.beginPath();
+          ctx.arc(axQ, ayQ, 9 + atlasPulse * 8, 0, Math.PI * 2);
+          ctx.strokeStyle = turnIn ? 'rgba(93, 242, 189, 0.8)' : 'rgba(255, 210, 72, 0.85)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
+    }
 
     ctx.save();
     ctx.translate(px, py);

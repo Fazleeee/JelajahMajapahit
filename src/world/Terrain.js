@@ -423,13 +423,21 @@ export class TerrainSystem {
       addSteppedPillar(px, pz, 2.5, 3.6);
     }
 
-    // Corner Majapahit Terracotta Towers (Menara Sudut Kolam Bertingkat)
+    // Corner Majapahit Terracotta Towers (Menara Sudut Kolam Bertingkat + Jambangan Teratai)
     const corners = [
       [-69.5, -21.5], [-34.5, -21.5],
       [-69.5, 31.5], [-34.5, 31.5]
     ];
     for (const [cx, cz] of corners) {
       addSteppedPillar(cx, cz, 3.1, 4.3);
+    }
+
+    // Pancuran Jaladwara Kolam Segaran di Dinding Utara menghadap ke kolam
+    for (const jx of [-60.0, -52.0, -44.0]) {
+      const sg = new THREE.CylinderGeometry(0.18, 0.3, 1.3, 6);
+      sg.rotateX(Math.PI / 2);
+      sg.translate(jx, 1.35, -20.1);
+      capGeos.push(sg);
     }
 
     const mergedBricks = mergeGeometries(brickGeos);

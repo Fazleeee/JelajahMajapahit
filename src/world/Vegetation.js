@@ -29,6 +29,7 @@ export class VegetationAndNatureSystem {
     this.buildRoyalTorches();
     this.buildHistoricalSignposts();
     this.initAmbientParticles();
+    this.initCirclingEgrets();
   }
 
   isInsideProtectedArea(x, z) {
@@ -712,6 +713,37 @@ export class VegetationAndNatureSystem {
     this.scene.add(this.particles);
   }
 
+  // Burung Kuntul Putih Mengitari Sungai Brantas & Kolam Segaran (1 Draw Call GPU-animated!)
+  initCirclingEgrets() {
+    const birdCount = this.isMobile ? 10 : 18;
+    const wingGeo = new THREE.ConeGeometry(0.32, 0.95, 3);
+    wingGeo.rotateX(Math.PI / 2);
+    wingGeo.scale(2.4, 0.22, 1.0);
+
+    const birdMat = new THREE.MeshStandardMaterial({
+      color: '#f7f3e8',
+      roughness: 0.65,
+      emissive: '#383022',
+      emissiveIntensity: 0.25
+    });
+
+    this.egretsMesh = new THREE.InstancedMesh(wingGeo, birdMat, birdCount);
+    this.egretSeeds = [];
+    const dummy = new THREE.Object3D();
+
+    for (let i = 0; i < birdCount; i++) {
+      const centerX = i % 2 === 0 ? -48 + (i % 5) * 24 : 18 + (i % 4) * 18;
+      const centerZ = 56 + ((i % 3) - 1) * 16;
+      const radius = 12 + (i % 4) * 5.5;
+      const height = 11 + (i % 5) * 2.4;
+      const speed = 0.28 + (i % 4) * 0.06;
+      const phase = i * 1.15;
+      this.egretSeeds.push({ centerX, centerZ, radius, height, speed, phase, dummy });
+    }
+    this.egretsMesh.frustumCulled = false;
+    this.scene.add(this.egretsMesh);
+  }
+
   updateNearestTorches(playerPos) {
     const px = playerPos.x;
     const pz = playerPos.z;
@@ -774,6 +806,24 @@ export class VegetationAndNatureSystem {
       b.emblem.position.y = 3.1 + Math.sin(elapsedTime * 2.5 + b.phase) * 0.18;
       const pulse = 1.0 + Math.sin(elapsedTime * 2.2 + b.phase) * 0.1;
       b.ring.scale.set(pulse, pulse, 1);
+    }
+
+    // 4. Animasi burung kuntul berputar anggun di langit Majapahit (1 draw call)
+    if (this.egretsMesh && this.egretSeeds) {
+      for (let i = 0; i < this.egretSeeds.length; i++) {
+        const s = this.egretSeeds[i];
+        const ang = elapsedTime * s.speed + s.phase;
+        const bx = s.centerX + Math.cos(ang) * s.radius;
+        const bz = s.centerZ + Math.sin(ang) * s.radius;
+        const by = s.height + Math.sin(elapsedTime * 1.8 + s.phase) * 0.9;
+        const flap = Math.sin(elapsedTime * 7.5 + s.phase) * 0.32;
+        s.dummy.position.set(bx, by, bz);
+        s.dummy.rotation.set(0, -ang + Math.PI, flap);
+        s.dummy.scale.setScalar(1.0);
+        s.dummy.updateMatrix();
+        this.egretsMesh.setMatrixAt(i, s.dummy.matrix);
+      }
+      this.egretsMesh.instanceMatrix.needsUpdate = true;
     }
   }
 }
