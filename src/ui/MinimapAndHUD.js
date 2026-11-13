@@ -357,6 +357,15 @@ export class MinimapAndHUD {
       this.artifactModal.addEventListener('wheel', (e) => e.stopPropagation());
     }
 
+    if (this.interactPrompt) {
+      this.interactPrompt.addEventListener('mousedown', (e) => e.stopPropagation());
+      this.interactPrompt.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+      this.interactPrompt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.dispatchEvent(new CustomEvent('majapahit:interact'));
+      });
+    }
+
     // Interaksi Zone Pill (Buka Penjelasan Sejarah saat Diklik)
     if (this.zonePill) {
       this.zonePill.addEventListener('click', (e) => {
@@ -570,6 +579,7 @@ export class MinimapAndHUD {
 
     window.addEventListener('keydown', (e) => {
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+      if (e._majapahitKeyEHandled) return;
 
       if (e.code === 'KeyM') {
         gameState.toggleModal(ModalTypes.ATLAS);

@@ -4,7 +4,7 @@ import { BRIDGES, LANDMARKS, SOLID_COLLIDERS } from '../world/WorldData.js';
 import { CharacterModel } from './CharacterModel.js';
 import { ParticleFX } from './ParticleFX.js';
 import { TouchControls } from './TouchControls.js';
-import { gameState, ModalTypes } from '../core/GameState.js';
+import { gameState, GameStates, ModalTypes } from '../core/GameState.js';
 import { spatialGrid } from '../core/SpatialGrid.js';
 
 export class ExplorerController {
@@ -162,7 +162,11 @@ export class ExplorerController {
           break;
         case 'KeyE':
           if (e.repeat) return;
-          this.handleInteraction();
+          if (gameState.currentState === GameStates.INTRO) return;
+          if (this.handleInteraction()) {
+            e._majapahitKeyEHandled = true;
+            e.stopImmediatePropagation();
+          }
           break;
         case 'KeyF':
           this.toggleLenteraWaktu();
@@ -235,47 +239,59 @@ export class ExplorerController {
       },
       { passive: true }
     );
+    window.addEventListener('majapahit:interact', () => {
+      this.handleInteraction();
+    });
   }
 
   handleInteraction() {
-    if (this.isCinematicSync) return;
+    if (this.isCinematicSync) return false;
+    if (gameState.currentState === GameStates.INTRO) return false;
 
     const now = performance.now();
-    if (now - this.lastInteractionTime < 220) return;
+    if (now - this.lastInteractionTime < 220) return false;
     this.lastInteractionTime = now;
 
-    // 1. Jika ada jendela interaksi (Lore Kropak Lontar, Dialog Tokoh, atau Peti Artefak) yang sedang terbuka,
+    // 1. Jika ada jendela interaksi (Lore Kropak Lontar, Dialog Tokoh, Peti Artefak, atau Quest Popover) yang sedang terbuka,
     // menekan tombol E akan langsung menutupnya via Central GameState
     if (gameState.isInteractionModalOpen()) {
       if (this.audio) this.audio.playDialoguePop();
       gameState.closeAllModals();
-      return;
+      return true;
     }
+
+    // Jika modal non-interaksi (Atlas, Panduan, Quiz, Jurnal, Menu) sedang terbuka, jangan pemicu interaksi dunia di bawahnya
+    if (gameState.isModalOpen()) return false;
 
     if (this.nearInteractive) {
       if (this.nearInteractive.type === 'npc') {
         if (this.audio) this.audio.playDialoguePop();
         gameState.openModal(ModalTypes.DIALOGUE, { npc: this.nearInteractive.target });
-        return;
+        return true;
       } else if (this.nearInteractive.type === 'viewpoint') {
         const vpData = this.exploration.syncViewpoint(this.nearInteractive.target);
         if (vpData) {
           this.startViewpointCinematic(vpData);
+          return true;
         }
-        return;
+        return false;
       } else if (this.nearInteractive.type === 'artifact') {
         const artData = this.exploration.collectArtifact(this.nearInteractive.target);
         if (artData) {
           gameState.openModal(ModalTypes.ARTIFACT, { artifact: artData });
+          return true;
         }
-        return;
+        return false;
       }
     }
 
     if (this.nearLandmark) {
       if (this.audio) this.audio.playDiscoveryChime();
       gameState.openModal(ModalTypes.LORE, { landmark: this.nearLandmark });
+      return true;
     }
+
+    return false;
   }
 
   toggleLenteraWaktu() {

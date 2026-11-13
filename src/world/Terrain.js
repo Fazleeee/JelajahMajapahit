@@ -36,6 +36,11 @@ export function fbmNoise(x, z) {
   return val;
 }
 
+function smoothstep(edge0, edge1, x) {
+  const t = THREE.MathUtils.clamp((x - edge0) / (edge1 - edge0), 0, 1);
+  return t * t * (3 - 2 * t);
+}
+
 // River centerline Z for a given X
 export function getRiverCenterZ(x) {
   return 70 + Math.sin(x * 0.022) * 8 + Math.cos(x * 0.011) * 4;
@@ -53,9 +58,10 @@ export function getRoadFactor(x, z) {
     }
   }
 
-  // East-West Road (Dermaga Jung <- Pasar -> Lembah Candi) around Z = -4
-  if (x >= -140 && x <= 125) {
-    const targetZ = -4 + Math.sin(x * 0.025) * 4;
+  // East-West Road (Dermaga Jung <- Pasar -> Lembah Candi) around Z = -4, membelok lembut ke Z = -10 menuju Candi Bajang Ratu
+  if (x >= -140 && x <= 128) {
+    const eastBlend = smoothstep(36, 72, x);
+    const targetZ = THREE.MathUtils.lerp(-4 + Math.sin(x * 0.025) * 4, -10, eastBlend);
     const distEW = Math.abs(z - targetZ);
     if (distEW < 4.8) {
       road = Math.max(road, 1.0 - Math.max(0, (distEW - 2.4) / 2.4));
@@ -86,25 +92,34 @@ export function getTerrainHeight(x, z) {
     h = THREE.MathUtils.lerp(h, 1.65, flatFactor * 0.82);
   }
 
-  // Zone 3: Lembah Candi & Sanggar Pujangga (Eastern Highland with Terraces)
-  const dxHill = x - 112;
-  const dzHill = z + 12;
-  const distHill = Math.hypot(dxHill * 0.85, dzHill);
-  if (distHill < 62) {
-    // Jalur pendakian landai menuju Candi Bajang Ratu (z: -16..-4)
-    if (x >= 70 && x <= 94.5 && Math.abs(z + 10) < 6.0) {
-      const tRoad = (x - 70) / (94.5 - 70);
-      h = THREE.MathUtils.lerp(1.65, 9.8, tRoad);
-    } else if (x >= 92 && x <= 130 && z >= -22 && z <= 2) {
-      // Pelataran rata di puncak bukit Candi Bajang Ratu & Sanggar Pujangga
-      h = 9.8;
-    } else {
-      const t = 1 - distHill / 62;
-      const rawHill = Math.pow(t, 1.35) * 9.5;
-      const terraced = Math.floor(rawHill / 2.4) * 2.4 + (rawHill % 2.4) * 0.45;
-      const isRamp = x < 108 && Math.abs(z + 10) < 11.5;
-      h = Math.min(9.8, h + (isRamp ? rawHill * 0.85 : terraced));
-    }
+  // Zone 3: Lembah Candi & Sanggar Pujangga (Smooth Highland Plateau & Approach Ridge)
+  // Pelataran puncak rata [93.5..133.0] x [-21.0..0.5] mencakup Candi Bajang Ratu, tangga barat-timur, & Sanggar Pujangga
+  const cxPlat = THREE.MathUtils.clamp(x, 93.5, 133.0);
+  const czPlat = THREE.MathUtils.clamp(z, -21.0, 0.5);
+  const sxHill = x < 93.5 ? 1.458 : 0.88;
+  const dSkirt = Math.hypot((x - cxPlat) * sxHill, z - czPlat);
+
+  if (dSkirt < 56) {
+    const valleyLift = 1 - smoothstep(28, 56, dSkirt);
+    const meadowFloor = Math.max(h, 1.45 + n * 1.05);
+    h = THREE.MathUtils.lerp(h, meadowFloor, valleyLift);
+  }
+
+  if (dSkirt < 43) {
+    const hillS = 1 - smoothstep(0, 43, dSkirt);
+    const contouredS = THREE.MathUtils.clamp(hillS + 0.038 * Math.sin(hillS * Math.PI * 4), 0, 1);
+    const hillH = THREE.MathUtils.lerp(h, 9.8, contouredS);
+
+    // Jalur pendakian landai & mulus dari Pasar Kotaraja menuju kaki tangga Candi Bajang Ratu (z ~ -10)
+    const tLin = THREE.MathUtils.clamp((x - 64) / (93.5 - 64), 0, 1);
+    const roadClimb = THREE.MathUtils.lerp(tLin, tLin * tLin * (3 - 2 * tLin), 0.5);
+    const roadH = THREE.MathUtils.lerp(Math.max(h, 1.65), 9.8, roadClimb);
+    const roadMask =
+      smoothstep(58, 66, x) *
+      (1 - smoothstep(93.5, 96.0, x)) *
+      (1 - smoothstep(4.5, 19.0, Math.abs(z + 10)));
+
+    h = THREE.MathUtils.lerp(hillH, roadH, roadMask);
   }
 
   // Zone 5: Kedaton Agung Northern Plateau & Surrounding Defensive Moat
@@ -253,7 +268,8 @@ export class TerrainSystem {
         tempColor.copy(cForestGrass).lerp(cLushGrass, n);
       } else if (vx > 65) {
         // Lembah Candi highland moss & stone
-        tempColor.copy(cHighlandGrass).lerp(cTempleStone, Math.min(1, (vy - 2.0) / 8.0));
+        const stoneBlend = Math.min(1, Math.max(0, (vy - 2.0) / 6.5));
+        tempColor.copy(cHighlandGrass).lerp(cTempleStone, stoneBlend);
       } else {
         tempColor.copy(cLushGrass).lerp(cHighlandGrass, n * 0.65);
       }
