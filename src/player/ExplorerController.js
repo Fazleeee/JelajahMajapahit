@@ -18,7 +18,6 @@ export class ExplorerController {
 
     // Start position in Hutan Tarik (Zona 1)
     this.position = new THREE.Vector3(0, getWalkableHeight(0, 142), 142);
-    this.velocity = new THREE.Vector3();
     this.verticalVelocity = 0;
     this.isGrounded = true;
     this.isWater = false;
@@ -244,6 +243,11 @@ export class ExplorerController {
     );
     window.addEventListener('majapahit:interact', () => {
       this.handleInteraction();
+    });
+    window.addEventListener('majapahit:lantern-request', () => {
+      if (gameState.currentState !== GameStates.INTRO) {
+        this.toggleLenteraWaktu();
+      }
     });
   }
 

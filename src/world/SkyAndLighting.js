@@ -82,7 +82,6 @@ export class SkyAndLightingSystem {
     this.isMobile = isMobile;
     this.currentPresetKey = 'sunset';
     this.targetPreset = TIME_PRESETS.sunset;
-    this._sunDir = new THREE.Vector3();
 
     // Live interpolated state
     this.state = {

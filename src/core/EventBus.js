@@ -2,14 +2,10 @@
 
 export const GameEvents = {
   // Siklus Game & Status
-  GAME_START: 'game:start',
   STATE_CHANGE: 'game:state-change',
   PLAYER_LOCK: 'player:lock-change',
 
   // Eksplorasi & Interaksi Dunia
-  INSPECT_LANDMARK: 'majapahit:inspect-landmark',
-  OPEN_DIALOGUE: 'majapahit:open-dialogue',
-  CLOSE_DIALOGUE: 'majapahit:close-dialogue',
   ARTIFACT_COLLECTED: 'majapahit:artifact-collected',
   VIEWPOINT_SYNCED: 'majapahit:viewpoint-synced',
   QUEST_COMPLETED: 'majapahit:quest-completed',
@@ -17,15 +13,7 @@ export const GameEvents = {
 
   // UI & Jendela Modal
   MODAL_OPEN: 'modal:open',
-  MODAL_CLOSE: 'modal:close',
-  CLOSE_ALL_MODALS: 'majapahit:close-external-modals',
-  CLOSE_INTERACTION_MODALS: 'majapahit:close-interaction-modals',
-
-  // Shortcut Aksi
-  OPEN_QUIZ: 'majapahit:open-quiz',
-  TOGGLE_JOURNAL: 'majapahit:toggle-journal',
-  TOGGLE_ATLAS: 'majapahit:toggle-atlas',
-  TOGGLE_HELP: 'majapahit:toggle-help'
+  MODAL_CLOSE: 'modal:close'
 };
 
 class GameEventBus {

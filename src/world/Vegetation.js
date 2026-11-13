@@ -626,7 +626,9 @@ export class VegetationAndNatureSystem {
     });
     const emblemGeo = new THREE.OctahedronGeometry(0.38, 0);
 
+    const skipSteleIds = new Set(['jembatan_brantas', 'candi_bajang_ratu', 'balairung_kencana', 'kapal_jung']);
     LANDMARKS.forEach((lm, idx) => {
+      if (skipSteleIds.has(lm.id)) return;
       const y = getTerrainHeight(lm.position.x, lm.position.z);
       const baseY = Math.max(y, 1.6);
 

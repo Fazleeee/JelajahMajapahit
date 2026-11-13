@@ -223,7 +223,6 @@ export function getWalkableHeight(x, z) {
 export class TerrainSystem {
   constructor(scene) {
     this.scene = scene;
-    this.waterMeshes = [];
     this.buildTerrainMesh();
     this.buildWaterBodies();
     this.buildKolamSegaranWalls();

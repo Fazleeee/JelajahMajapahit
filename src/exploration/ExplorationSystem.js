@@ -141,8 +141,6 @@ export class ExplorationSystem {
     // Visual Meshes Collections
     this.artifactMeshes = [];
     this.viewpointRings = [];
-    this.beaconPillars = [];
-    this.trailFootprints = [];
 
     // Dirty flag & cell cache for Fog of War optimization
     this.fogDirty = true;

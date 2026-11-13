@@ -420,7 +420,7 @@ export class MinimapAndHUD {
 
     if (this.menuBtnLantern) {
       this.menuBtnLantern.addEventListener('click', () => {
-        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyF' }));
+        window.dispatchEvent(new CustomEvent('majapahit:lantern-request'));
       });
     }
 
@@ -529,20 +529,6 @@ export class MinimapAndHUD {
     }
 
     // Tangkap Custom Events
-    window.addEventListener('majapahit:inspect-landmark', (e) => {
-      const lm = e.detail.landmark;
-      if (lm) {
-        this.showLoreModal(lm.title, lm.text);
-      }
-    });
-
-    window.addEventListener('majapahit:open-dialogue', (e) => {
-      const npc = e.detail.npc;
-      if (npc) {
-        this.showDialogue(npc);
-      }
-    });
-
     window.addEventListener('majapahit:artifact-collected', (e) => {
       const art = e.detail.artifact;
       if (art) {
@@ -571,10 +557,6 @@ export class MinimapAndHUD {
         this.menuBtnLantern.classList.toggle('active', active);
       }
       document.body.classList.toggle('lantern-active', active);
-    });
-
-    window.addEventListener('majapahit:close-interaction-modals', () => {
-      this.closeInteractionModals();
     });
 
     window.addEventListener('keydown', (e) => {
@@ -872,9 +854,6 @@ export class MinimapAndHUD {
     const total = HISTORICAL_ARTIFACTS.length;
     const count = this.exploration.collectedArtifacts.length;
 
-    if (this.relicCounterEl) {
-      this.relicCounterEl.textContent = `🏺 ${count}/${total} Artefak`;
-    }
     if (this.profileRelicCount) {
       this.profileRelicCount.textContent = `🏺 ${count}/${total} Artefak`;
     }
